@@ -1,0 +1,43 @@
+{
+  "session_id": "bf6e25fe-5b46-4f02-9ade-9e9c2e923498",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，我是今天负责前端开发工程师岗位的面试官。接下来我们会先聊一聊你的过往经历，再考察一些技术细节，整体大概30-40分钟。请先做个自我介绍，重点说说你常用的技术栈和近期的项目经验。"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "感谢你参加今天的面试，面试官正在为你生成复盘报告..."
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，我是今天负责前端开发工程师岗位的面试官。接下来我们会先聊一聊你的过往经历，再考察一些技术细节，整体大概30-40分钟。请先做个自我介绍，重点说说你常用的技术栈和近期的项目经验。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {},
+  "section_scores": {},
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 0,
+  "session_status": "finished",
+  "completed_stages": [],
+  "target_position": "前端开发工程师",
+  "user_assets": {
+    "target_position": "前端开发工程师"
+  },
+  "updated_at": 1784351535
+}

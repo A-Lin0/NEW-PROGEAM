@@ -1,0 +1,57 @@
+{
+  "session_id": "e9829ae2-c3a6-4a26-974f-817cff7e33a8",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，我是今天的面试官。我们直接开始，先请你做个简单的自我介绍，重点说说你的技术栈和最近做过的项目，尤其是和分布式、后端架构相关的部分。"
+    },
+    {
+      "role": "user",
+      "content": "你好，我有5年Python后端开发经验，主要技术栈包括FastAPI、Django、PostgreSQL、Redis。最近做了一个分布式任务调度系统，使用Celery+RabbitMQ实现，日均处理千万级任务。"
+    },
+    {
+      "role": "interviewer",
+      "content": "【点评】优点：直接切入主题，明确提及5年经验、核心后端技术栈（FastAPI、Django、PostgreSQL、Redis）和分布式相关项目（Celery+RabbitMQ），并给出量化数据（日均千万级任务）。\n缺失：未介绍项目具体架构、个人角色、技术难点或解决方案，也未提及分布式系统设计（如任务分片、容错、监控）等细节，整体信息较单薄。\n优化建议：补充项目中的架构设计思路（如如何保证任务可靠性和高并发）、个人贡献（如优化了哪些瓶颈）、以及与其他后端系统的集成方式。\n\n好的，接下来进入专业技术环节。\n\n好的。你的项目里提到了分布式任务调度，我们假设现在有一个场景：需要设计一个支持高并发的短链服务，要求短链生成后能支持亿级访问，并且要保证数据一致性。你会怎么设计后端架构？请从存储、缓存、API设计几个方面展开。"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，我是今天的面试官。我们直接开始，先请你做个简单的自我介绍，重点说说你的技术栈和最近做过的项目，尤其是和分布式、后端架构相关的部分。",
+      "answer": "你好，我有5年Python后端开发经验，主要技术栈包括FastAPI、Django、PostgreSQL、Redis。最近做了一个分布式任务调度系统，使用Celery+RabbitMQ实现，日均处理千万级任务。",
+      "review": "优点：直接切入主题，明确提及5年经验、核心后端技术栈（FastAPI、Django、PostgreSQL、Redis）和分布式相关项目（Celery+RabbitMQ），并给出量化数据（日均千万级任务）。\n缺失：未介绍项目具体架构、个人角色、技术难点或解决方案，也未提及分布式系统设计（如任务分片、容错、监控）等细节，整体信息较单薄。\n优化建议：补充项目中的架构设计思路（如如何保证任务可靠性和高并发）、个人贡献（如优化了哪些瓶颈）、以及与其他后端系统的集成方式。",
+      "score": 70,
+      "skipped": false
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，接下来进入专业技术环节。\n\n好的。你的项目里提到了分布式任务调度，我们假设现在有一个场景：需要设计一个支持高并发的短链服务，要求短链生成后能支持亿级访问，并且要保证数据一致性。你会怎么设计后端架构？请从存储、缓存、API设计几个方面展开。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      70
+    ]
+  },
+  "section_scores": {},
+  "total_score": 0,
+  "current_stage": "tech_qa",
+  "question_index": 0,
+  "session_status": "active",
+  "completed_stages": [
+    "self_intro"
+  ],
+  "target_position": "Python后端工程师",
+  "user_assets": {
+    "target_position": "Python后端工程师"
+  },
+  "updated_at": 1784295641
+}

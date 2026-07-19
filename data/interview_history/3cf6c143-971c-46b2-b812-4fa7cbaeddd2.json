@@ -1,0 +1,57 @@
+{
+  "session_id": "3cf6c143-971c-46b2-b812-4fa7cbaeddd2",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，我是今天负责面试你的面试官。我们直接开始，先请你做一个简短的自我介绍，重点说说你过往的技术栈和做过的项目，特别是跟Python后端相关的内容。"
+    },
+    {
+      "role": "user",
+      "content": "我有5年Python后端经验，精通FastAPI和Django，做过分布式任务调度系统。"
+    },
+    {
+      "role": "interviewer",
+      "content": "【点评】优点：候选人明确提到了5年Python后端经验，以及FastAPI和Django这两个核心框架，并提及了分布式任务调度系统项目，符合岗位要求。\n缺失：回答过于简短，缺乏对项目细节、技术选型原因、个人角色和具体成果的描述，没有展示出逻辑层次和量化数据。\n优化建议：建议候选人补充项目背景、使用的具体技术（如消息队列、数据库、容器化等）、个人贡献以及可量化的成果（如系统吞吐量、任务处理效率提升等），使自我介绍更有说服力。\n\n好的，接下来进入专业技术环节。\n\n好。假设我们现在要设计一个高并发的API网关，需要支持每秒10万次请求，并且能动态路由到多个微服务。你会怎么设计这个网关的核心架构？请重点讲一下你如何处理限流、熔断和请求转发这三个关键点。"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，我是今天负责面试你的面试官。我们直接开始，先请你做一个简短的自我介绍，重点说说你过往的技术栈和做过的项目，特别是跟Python后端相关的内容。",
+      "answer": "我有5年Python后端经验，精通FastAPI和Django，做过分布式任务调度系统。",
+      "review": "优点：候选人明确提到了5年Python后端经验，以及FastAPI和Django这两个核心框架，并提及了分布式任务调度系统项目，符合岗位要求。\n缺失：回答过于简短，缺乏对项目细节、技术选型原因、个人角色和具体成果的描述，没有展示出逻辑层次和量化数据。\n优化建议：建议候选人补充项目背景、使用的具体技术（如消息队列、数据库、容器化等）、个人贡献以及可量化的成果（如系统吞吐量、任务处理效率提升等），使自我介绍更有说服力。",
+      "score": 55,
+      "skipped": false
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，接下来进入专业技术环节。\n\n好。假设我们现在要设计一个高并发的API网关，需要支持每秒10万次请求，并且能动态路由到多个微服务。你会怎么设计这个网关的核心架构？请重点讲一下你如何处理限流、熔断和请求转发这三个关键点。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      55
+    ]
+  },
+  "section_scores": {},
+  "total_score": 0,
+  "current_stage": "tech_qa",
+  "question_index": 0,
+  "session_status": "active",
+  "completed_stages": [
+    "self_intro"
+  ],
+  "target_position": "Python后端工程师",
+  "user_assets": {
+    "target_position": "Python后端工程师"
+  },
+  "updated_at": 1784301085
+}

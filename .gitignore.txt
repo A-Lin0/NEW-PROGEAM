@@ -1,0 +1,15 @@
+# Python虚拟环境（这个文件夹几个G，不用备份）
+.venv/
+# 调试缓存目录
+.dbg/
+
+# 缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.DS_Store
+
+# 数据集缓存（可选）
+data/cache/

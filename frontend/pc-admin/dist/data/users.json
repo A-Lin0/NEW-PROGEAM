@@ -1,0 +1,56 @@
+{
+  "admins": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin",
+      "email": "admin@interview.com",
+      "phone": "13800000000",
+      "created_at": "2026-07-15 10:00:00",
+      "status": "active"
+    },
+    {
+      "id": 5,
+      "username": "A0",
+      "password": "12345",
+      "role": "admin",
+      "email": "a0@interview.com",
+      "phone": "13800000004",
+      "created_at": "2026-07-15 21:00:00",
+      "status": "active"
+    }
+  ],
+  "users": [
+    {
+      "id": 2,
+      "username": "user1",
+      "password": "123456",
+      "role": "user",
+      "email": "user1@test.com",
+      "phone": "13800000001",
+      "created_at": "2026-07-15 10:00:00",
+      "status": "active"
+    },
+    {
+      "id": 3,
+      "username": "张三丰",
+      "password": "123456",
+      "role": "user",
+      "email": "zsf@test.com",
+      "phone": "13800000002",
+      "created_at": "2026-07-15 10:00:00",
+      "status": "active"
+    },
+    {
+      "id": 4,
+      "username": "Tom_2026",
+      "password": "123456",
+      "role": "user",
+      "email": "tom@test.com",
+      "phone": "13800000003",
+      "created_at": "2026-07-15 10:00:00",
+      "status": "active"
+    }
+  ]
+}

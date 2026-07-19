@@ -1,0 +1,22 @@
+{
+  "session_id": "e3cee089-b41a-41c2-a9e0-2eb405318562",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    }
+  ],
+  "question_records": [],
+  "stage_scores": {},
+  "section_scores": {},
+  "total_score": 0,
+  "current_stage": "init",
+  "question_index": 0,
+  "session_status": "new",
+  "completed_stages": [],
+  "target_position": "",
+  "user_assets": {
+    "target_position": "Python后端工程师"
+  },
+  "updated_at": 1784299406
+}

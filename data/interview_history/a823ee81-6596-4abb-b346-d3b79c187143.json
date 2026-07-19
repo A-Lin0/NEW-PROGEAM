@@ -1,0 +1,67 @@
+{
+  "session_id": "a823ee81-6596-4abb-b346-d3b79c187143",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，我是今天负责面试你的工程师。今天我们聊一下数据分析工程师这个岗位，流程上会先请你做个自我介绍，然后我会针对你的项目经历和技术能力问几个具体问题。先说说你的数据相关经历和技术背景吧。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "好的，接下来进入专业技术环节。\n\n好，那我们直接进入技术题。假设有一个电商平台的订单表 `orders`，包含 `order_id`、`user_id`、`order_amount`、`order_date` 四个字段。请写一段SQL，统计出每个用户最近30天内累计订单金额超过1000元的用户ID，并输出其累计金额。请说明你的思路和SQL写法。"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "感谢你参加今天的面试，面试官正在为你生成复盘报告..."
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，我是今天负责面试你的工程师。今天我们聊一下数据分析工程师这个岗位，流程上会先请你做个自我介绍，然后我会针对你的项目经历和技术能力问几个具体问题。先说说你的数据相关经历和技术背景吧。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，接下来进入专业技术环节。\n\n好，那我们直接进入技术题。假设有一个电商平台的订单表 `orders`，包含 `order_id`、`user_id`、`order_amount`、`order_date` 四个字段。请写一段SQL，统计出每个用户最近30天内累计订单金额超过1000元的用户ID，并输出其累计金额。请说明你的思路和SQL写法。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      0
+    ]
+  },
+  "section_scores": {
+    "self_intro": 0
+  },
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 0,
+  "session_status": "finished",
+  "completed_stages": [
+    "self_intro"
+  ],
+  "target_position": "数据分析工程师",
+  "user_assets": {
+    "target_position": "数据分析工程师"
+  },
+  "updated_at": 1784351732
+}

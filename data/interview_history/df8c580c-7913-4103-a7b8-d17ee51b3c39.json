@@ -1,0 +1,83 @@
+{
+  "session_id": "df8c580c-7913-4103-a7b8-d17ee51b3c39",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，我是今天负责前端开发工程师岗位的面试官。接下来我们先做一下自我介绍，请你简要介绍你的技术栈和过往项目经历，我会根据你的介绍展开后续问题。"
+    },
+    {
+      "role": "user",
+      "content": "目前没有任何经历"
+    },
+    {
+      "role": "interviewer",
+      "content": "【点评】优点：无\n缺失：完全没有回答问题的任何要点，未介绍技术栈、项目经历或任何相关经验。\n优化建议：即使没有正式经历，也可以提及个人学习项目、课程作业、开源贡献或自学的前端技术（如HTML、CSS、JavaScript、React等），展示基础能力和学习态度。\n\n好的，接下来进入专业技术环节。\n\n好的，那我们从基础能力开始。请说一下：当用户在浏览器地址栏输入一个URL并回车，到页面完整展示出来的过程中，前端开发者需要关注哪些关键节点？"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "感谢你参加今天的面试，面试官正在为你生成复盘报告..."
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0.0, \"section_scores\": {\"self_intro\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0, \"question_count\": 1, \"comment\": \"自我介绍环节得分 0/100，共1题\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0, \"question_count\": 1, \"comment\": \"专业技术环节得分 0/100，共1题\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 0, \"comment\": \"行为面试环节未进行\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 0, \"comment\": \"项目案例环节未进行\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"stage\": \"self_intro\", \"question\": \"请你简要介绍你的技术栈和过往项目经历\", \"answer\": \"目前没有任何经历\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未回答任何技术栈或项目经历，完全回避问题\", \"缺乏主动展示自身能力的意识\"], \"optimization\": \"即使无正式经历，也应提及自学项目、课程作业或开源贡献，展示基础与学习态度。\"}, {\"stage\": \"tech_qa\", \"question\": \"当用户在浏览器地址栏输入一个URL并回车，到页面完整展示出来的过程中，前端开发者需要关注哪些关键节点？\", \"answer\": \"（未作答，直接结束面试）\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"完全未作答，放弃展示技术能力的机会\", \"缺乏应对问题的基本尝试和沟通\"], \"optimization\": \"至少尝试回答DNS解析、HTTP请求、DOM渲染等基础节点，展示思考过程。\"}], \"overall_problems\": [\"候选人未进行任何有效回答，完全回避所有问题\", \"缺乏基本的面试准备和沟通意愿，未展示任何技术或学习能力\"], \"improvement_plan\": {\"short_term\": [\"整理个人学习项目或课程作业，准备1-2分钟自我介绍\", \"学习并背诵浏览器输入URL到页面展示的完整流程（DNS、TCP、HTTP、渲染等）\"], \"long_term\": [\"系统学习前端基础（HTML/CSS/JavaScript），并完成至少一个完整项目\", \"参与开源社区或技术博客，积累可展示的技术成果\"], \"practice_suggestions\": [\"模拟面试练习，针对常见问题（如自我介绍、浏览器原理）提前准备答案\", \"每天花30分钟阅读前端面试题并尝试口头作答，提升表达流畅度\"]}, \"overall_comment\": \"本次面试综合得分为0分，候选人未回答任何问题，完全未展示技术能力或学习态度。主要短板在于缺乏面试准备和沟通意愿，甚至未尝试作答。核心建议是立即从基础学习开始，整理个人项目经历，并针对常见面试题进行模拟练习，否则难以通过任何技术面试。\"}"
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0.0, \"section_scores\": {\"self_intro\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0, \"question_count\": 1, \"comment\": \"自我介绍环节得分 0/100，共1题\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0, \"question_count\": 1, \"comment\": \"专业技术环节得分 0/100，共1题\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 0, \"comment\": \"行为面试环节未进行\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 0, \"comment\": \"项目案例环节未进行\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"stage\": \"self_intro\", \"question\": \"请你简要介绍你的技术栈和过往项目经历\", \"answer\": \"目前没有任何经历\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未回答任何技术栈或项目经历，完全回避问题\", \"缺乏主动展示自身能力的意识\"], \"optimization\": \"即使无正式经历，也应提及自学项目、课程作业或开源贡献，展示基础与学习态度。\"}, {\"stage\": \"tech_qa\", \"question\": \"当用户在浏览器地址栏输入一个URL并回车，到页面完整展示出来的过程中，前端开发者需要关注哪些关键节点？\", \"answer\": \"（未作答，直接结束面试）\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"完全未作答，放弃展示技术能力的机会\", \"缺乏应对问题的基本尝试和沟通\"], \"optimization\": \"至少尝试回答DNS解析、HTTP请求、DOM渲染等基础节点，展示思考过程。\"}], \"overall_problems\": [\"候选人未进行任何有效回答，完全回避所有问题\", \"缺乏基本的面试准备和沟通意愿，未展示任何技术或学习能力\"], \"improvement_plan\": {\"short_term\": [\"整理个人学习项目或课程作业，准备1-2分钟自我介绍\", \"学习并背诵浏览器输入URL到页面展示的完整流程（DNS、TCP、HTTP、渲染等）\"], \"long_term\": [\"系统学习前端基础（HTML/CSS/JavaScript），并完成至少一个完整项目\", \"参与开源社区或技术博客，积累可展示的技术成果\"], \"practice_suggestions\": [\"模拟面试练习，针对常见问题（如自我介绍、浏览器原理）提前准备答案\", \"每天花30分钟阅读前端面试题并尝试口头作答，提升表达流畅度\"]}, \"overall_comment\": \"本次面试综合得分为0分，候选人未回答任何问题，完全未展示技术能力或学习态度。主要短板在于缺乏面试准备和沟通意愿，甚至未尝试作答。核心建议是立即从基础学习开始，整理个人项目经历，并针对常见面试题进行模拟练习，否则难以通过任何技术面试。\"}"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，我是今天负责前端开发工程师岗位的面试官。接下来我们先做一下自我介绍，请你简要介绍你的技术栈和过往项目经历，我会根据你的介绍展开后续问题。",
+      "answer": "目前没有任何经历",
+      "review": "优点：无\n缺失：完全没有回答问题的任何要点，未介绍技术栈、项目经历或任何相关经验。\n优化建议：即使没有正式经历，也可以提及个人学习项目、课程作业、开源贡献或自学的前端技术（如HTML、CSS、JavaScript、React等），展示基础能力和学习态度。",
+      "score": 0,
+      "skipped": false
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，接下来进入专业技术环节。\n\n好的，那我们从基础能力开始。请说一下：当用户在浏览器地址栏输入一个URL并回车，到页面完整展示出来的过程中，前端开发者需要关注哪些关键节点？",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      0
+    ]
+  },
+  "section_scores": {
+    "self_intro": 0
+  },
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 0,
+  "session_status": "finished",
+  "completed_stages": [
+    "self_intro"
+  ],
+  "target_position": "前端开发工程师",
+  "user_assets": {
+    "target_position": "前端开发工程师"
+  },
+  "updated_at": 1784346137
+}

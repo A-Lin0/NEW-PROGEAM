@@ -1,0 +1,57 @@
+{
+  "session_id": "b0839832-7ddb-4901-9cc0-b7599dbd7886",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，这次是Python后端工程师的面试。我们先简单聊一下，请你先做个自我介绍，重点说说你平时主要用什么技术栈，以及最近做过的一两个后端项目，包括你在其中的角色和负责的核心模块。"
+    },
+    {
+      "role": "user",
+      "content": "我有5年Python后端经验，精通FastAPI和Django，做过分布式任务调度系统。"
+    },
+    {
+      "role": "interviewer",
+      "content": "【点评】优点：候选人明确提到了5年经验、FastAPI和Django技术栈，以及分布式任务调度系统项目，符合岗位要求。\n缺失：未提及具体角色和核心模块，缺乏项目细节和量化成果，自我介绍过于简略。\n优化建议：建议补充在项目中的具体职责（如设计、开发、优化），描述核心模块（如任务分发、监控），并加入量化数据（如处理任务量、性能提升百分比）。\n\n好的，接下来进入专业技术环节。\n\n好，那我们直接进入正题。\n\n假设你需要设计一个类似“用户实时积分排行榜”的系统，要求支持千万级用户、积分实时更新、排行榜秒级刷新。请从数据存储选型、读写架构、缓存策略、降级方案几个方面，给出你的设计思路。"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，这次是Python后端工程师的面试。我们先简单聊一下，请你先做个自我介绍，重点说说你平时主要用什么技术栈，以及最近做过的一两个后端项目，包括你在其中的角色和负责的核心模块。",
+      "answer": "我有5年Python后端经验，精通FastAPI和Django，做过分布式任务调度系统。",
+      "review": "优点：候选人明确提到了5年经验、FastAPI和Django技术栈，以及分布式任务调度系统项目，符合岗位要求。\n缺失：未提及具体角色和核心模块，缺乏项目细节和量化成果，自我介绍过于简略。\n优化建议：建议补充在项目中的具体职责（如设计、开发、优化），描述核心模块（如任务分发、监控），并加入量化数据（如处理任务量、性能提升百分比）。",
+      "score": 50,
+      "skipped": false
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，接下来进入专业技术环节。\n\n好，那我们直接进入正题。\n\n假设你需要设计一个类似“用户实时积分排行榜”的系统，要求支持千万级用户、积分实时更新、排行榜秒级刷新。请从数据存储选型、读写架构、缓存策略、降级方案几个方面，给出你的设计思路。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      50
+    ]
+  },
+  "section_scores": {},
+  "total_score": 0,
+  "current_stage": "tech_qa",
+  "question_index": 0,
+  "session_status": "active",
+  "completed_stages": [
+    "self_intro"
+  ],
+  "target_position": "Python后端工程师",
+  "user_assets": {
+    "target_position": "Python后端工程师"
+  },
+  "updated_at": 1784300895
+}

@@ -1,0 +1,46 @@
+{
+  "session_id": "6468bc36-26ad-440b-8081-7f56e6abf578",
+  "history": [
+    {
+      "role": "user",
+      "content": "你好，开始面试"
+    },
+    {
+      "role": "user",
+      "content": "你好，开始面试"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "init",
+      "question": "",
+      "answer": "你好，开始面试",
+      "review": "优点：候选人主动开启面试流程，态度积极，符合面试开场的基本要求。\n不足：回答内容过于简单，仅包含问候语，未涉及任何问题要点、专业术语、逻辑结构或成果展示，完全不符合面试评估的深度要求。\n优化建议：建议候选人针对问题展开具体回答，例如结合岗位要求阐述个人优势、相关经验或项目成果，并注意使用结构化表达（如分点说明）和量化数据来增强说服力。",
+      "score": 10,
+      "skipped": false
+    },
+    {
+      "stage": "init",
+      "question": "",
+      "answer": "你好，开始面试",
+      "review": "优点：候选人主动开启面试流程，态度积极。\n不足：回答内容过于简短，未针对面试问题提供任何实质性信息，缺乏对岗位要求的回应，未展示专业能力或经验。\n优化建议：建议候选人详细阐述自身背景、技能与岗位的匹配点，例如介绍过往项目经验、核心能力或职业规划，并主动询问面试细节以展示主动性。",
+      "score": 10,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "init": [
+      10,
+      10
+    ]
+  },
+  "section_scores": {},
+  "total_score": 0,
+  "current_stage": "init",
+  "question_index": 0,
+  "session_status": "new",
+  "completed_stages": [],
+  "target_position": "",
+  "user_assets": {},
+  "updated_at": 1784377055
+}

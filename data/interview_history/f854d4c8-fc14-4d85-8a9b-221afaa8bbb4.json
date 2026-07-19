@@ -1,0 +1,196 @@
+{
+  "session_id": "f854d4c8-fc14-4d85-8a9b-221afaa8bbb4",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "你好，我是今天的产品经理面试官。接下来我会先请你做个自我介绍，然后围绕你的产品经历和项目背景聊一聊，整体大概30分钟左右。请开始。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "好的，接下来进入专业技术环节。\n\n好的，那我们进入正题。假设你正在负责一款面向年轻用户的社交类App，近期数据显示用户次日留存率下降了10%。你会如何分析这个问题，并制定下一步的产品优化方案？请从数据、用户、产品三个层面展开。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "我们来聊一个更贴近实际工作场景的问题。\n\n假设你负责一款B端SaaS产品的用户权限管理模块，目前客户反馈“权限配置太复杂，学习成本高”，但同时销售团队希望保留更多自定义能力以应对不同客户需求。你作为产品经理，会如何平衡用户易用性与功能灵活性？请给出你的分析思路和具体方案。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "好的，最后一道题。\n\n假设你负责一款内容社区产品的“用户成长体系”，包括等级、积分、勋章等机制。上线三个月后，核心数据指标（如日活、发帖率、留存）均无明显提升。你会如何从数据、用户行为、产品设计三个维度复盘这个问题，并给出下一步的迭代方向？请结合你的实际经验来谈。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "技术环节告一段落，接下来聊聊行为面试题。\n\n好的，面试到这里就结束了。感谢你的时间，后续如果有进一步安排，我们会在一周内通知你。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "好的，那我们进入行为面试环节。\n\n请分享一个你在过去工作中，遇到的一个需求分析或产品设计上的重大失误。你是如何发现这个问题的？后续采取了哪些措施来补救或调整？请用STAR法则（情境、任务、行动、结果）来具体描述。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "接下来进入项目案例环节，请结合实际项目作答。\n\n好的，面试到这里就全部结束了。感谢你今天的时间与分享，后续结果我们会在一周内通知你。祝你顺利。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "好的，那我们来聊一个具体的项目案例。\n\n假设你正在负责一款面向中小企业的协作办公SaaS产品，目前公司战略方向是快速抢占市场份额。你作为产品经理，需要主导一个“从0到1”的新功能模块——企业知识库，预计3个月内上线MVP版本。请描述你的产品规划思路，包括目标用户定义、核心功能优先级、关键里程碑，以及你会如何协调设计、开发、运营、销售等跨部门资源来推进项目落地。"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "感谢你参加今天的面试，面试官正在为你生成复盘报告..."
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0.0, \"section_scores\": {\"self_intro\": 0, \"tech_qa\": 0, \"star_qa\": 0, \"project_qa\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0, \"question_count\": 1, \"comment\": \"自我介绍环节得分 0/100，共1题\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0, \"question_count\": 3, \"comment\": \"专业技术环节得分 0/100，共3题\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 2, \"comment\": \"行为面试环节得分 0/100，共2题\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 2, \"comment\": \"项目案例环节得分 0/100，共2题\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"stage\": \"self_intro\", \"question\": \"请先做个自我介绍\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示机会\"], \"optimization\": \"务必准备1-2分钟自我介绍，突出与岗位匹配的核心经验。\"}, {\"stage\": \"tech_qa\", \"question\": \"社交App次日留存下降10%，从数据、用户、产品三层面分析\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示分析能力的机会\"], \"optimization\": \"即使不确定也要尝试结构化回答，如先拆解数据维度。\"}, {\"stage\": \"tech_qa\", \"question\": \"B端SaaS权限管理：平衡易用性与灵活性\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示产品权衡能力的机会\"], \"optimization\": \"可举例分层权限方案或配置模板来体现思考。\"}, {\"stage\": \"tech_qa\", \"question\": \"内容社区用户成长体系上线3个月无提升，如何复盘迭代\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示复盘与迭代能力的机会\"], \"optimization\": \"从数据漏斗、用户行为路径、激励机制设计三方面展开。\"}, {\"stage\": \"star_qa\", \"question\": \"分享一个需求分析或产品设计上的重大失误（STAR法则）\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示反思与成长的机会\"], \"optimization\": \"提前准备1-2个真实案例，按STAR结构简述。\"}, {\"stage\": \"project_qa\", \"question\": \"从0到1企业知识库MVP规划，含目标用户、优先级、里程碑、跨部门协作\", \"answer\": \"结束面试\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示项目规划与协作能力的机会\"], \"optimization\": \"可先定义核心用户场景，再列出MVP功能清单与时间节点。\"}], \"overall_problems\": [\"所有问题均未作答，完全放弃展示能力的机会\", \"缺乏基本的面试参与意识，未尝试任何结构化回答\", \"对产品经理常见题型（分析、权衡、复盘、规划）无任何回应\"], \"improvement_plan\": {\"short_term\": [\"准备1-2分钟自我介绍模板，突出产品经验与岗位匹配点\", \"练习3道常见产品面试题（留存分析、权限设计、成长体系）并录音自评\"], \"long_term\": [\"系统学习产品经理面试常见题型（数据分析、权衡决策、项目规划）\", \"积累2-3个真实项目案例，按STAR法则整理成文档\"], \"practice_suggestions\": [\"每天模拟1道产品面试题，强制自己用'首先、其次、最后'结构化回答\", \"找朋友或导师进行模拟面试，训练即时反应与表达\"]}, \"overall_comment\": \"本次面试综合得分0分，候选人未回答任何问题，全程选择'跳过'或'结束面试'，完全放弃展示产品思维、分析能力及项目经验的机会。主要短板在于缺乏面试参与意识和基本应对策略。建议候选人立即调整心态，从准备自我介绍和基础题型入手，通过模拟练习逐步建立回答框架，避免在正式面试中再次出现零回答的情况。\"}"
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0.0, \"section_scores\": {\"self_intro\": 0, \"tech_qa\": 0, \"star_qa\": 0, \"project_qa\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0, \"question_count\": 1, \"comment\": \"自我介绍环节得分 0/100，共1题\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0, \"question_count\": 3, \"comment\": \"专业技术环节得分 0/100，共3题\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 2, \"comment\": \"行为面试环节得分 0/100，共2题\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 2, \"comment\": \"项目案例环节得分 0/100，共2题\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"stage\": \"self_intro\", \"question\": \"请先做个自我介绍\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示个人背景与岗位匹配度的机会\"], \"optimization\": \"准备1-2分钟自我介绍，突出产品经验与岗位匹配点，避免空白回答。\"}, {\"stage\": \"tech_qa\", \"question\": \"社交App次日留存下降10%，从数据、用户、产品三层面分析\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示数据分析与问题拆解能力的机会\"], \"optimization\": \"即使不确定也要尝试结构化回答，如先拆解数据维度再提出假设。\"}, {\"stage\": \"tech_qa\", \"question\": \"B端SaaS权限管理：平衡易用性与灵活性\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示产品权衡与方案设计能力的机会\"], \"optimization\": \"可举例分层权限方案或配置模板来体现思考深度。\"}, {\"stage\": \"tech_qa\", \"question\": \"内容社区用户成长体系上线3个月无提升，如何复盘迭代\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示复盘与迭代能力的机会\"], \"optimization\": \"从数据漏斗、用户行为路径、激励机制设计三方面展开分析。\"}, {\"stage\": \"star_qa\", \"question\": \"分享一个需求分析或产品设计上的重大失误（STAR法则）\", \"answer\": \"跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示反思与成长的机会\"], \"optimization\": \"提前准备1-2个真实案例，按STAR结构简述，突出学习与改进。\"}, {\"stage\": \"project_qa\", \"question\": \"从0到1企业知识库MVP规划，含目标用户、优先级、里程碑、跨部门协作\", \"answer\": \"结束面试\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未作答，放弃展示项目规划与协作能力的机会\"], \"optimization\": \"可先定义核心用户场景，再列出MVP功能清单与时间节点。\"}], \"overall_problems\": [\"所有问题均未作答，完全放弃展示能力的机会\", \"缺乏基本的面试参与意识，未尝试任何结构化回答\", \"对产品经理常见题型（分析、权衡、复盘、规划）无任何回应\"], \"improvement_plan\": {\"short_term\": [\"准备1-2分钟自我介绍模板，突出产品经验与岗位匹配点\", \"练习3道常见产品面试题（留存分析、权限设计、成长体系）并录音自评\"], \"long_term\": [\"系统学习产品经理面试常见题型（数据分析、权衡决策、项目规划）\", \"积累2-3个真实项目案例，按STAR法则整理成文档\"], \"practice_suggestions\": [\"每天模拟1道产品面试题，强制用'首先、其次、最后'结构化回答\", \"找朋友或导师进行模拟面试，训练即时反应与表达\"]}, \"overall_comment\": \"本次面试综合得分0分，候选人未回答任何问题，全程选择'跳过'或'结束面试'，完全放弃展示产品思维、分析能力及项目经验的机会。主要短板在于缺乏面试参与意识和基本应对策略。建议候选人立即调整心态，从准备自我介绍和基础题型入手，通过模拟练习逐步建立回答框架，避免在正式面试中再次出现零回答的情况。\"}"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "你好，我是今天的产品经理面试官。接下来我会先请你做个自我介绍，然后围绕你的产品经历和项目背景聊一聊，整体大概30分钟左右。请开始。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，接下来进入专业技术环节。\n\n好的，那我们进入正题。假设你正在负责一款面向年轻用户的社交类App，近期数据显示用户次日留存率下降了10%。你会如何分析这个问题，并制定下一步的产品优化方案？请从数据、用户、产品三个层面展开。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "tech_qa",
+      "question": "我们来聊一个更贴近实际工作场景的问题。\n\n假设你负责一款B端SaaS产品的用户权限管理模块，目前客户反馈“权限配置太复杂，学习成本高”，但同时销售团队希望保留更多自定义能力以应对不同客户需求。你作为产品经理，会如何平衡用户易用性与功能灵活性？请给出你的分析思路和具体方案。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "tech_qa",
+      "question": "好的，最后一道题。\n\n假设你负责一款内容社区产品的“用户成长体系”，包括等级、积分、勋章等机制。上线三个月后，核心数据指标（如日活、发帖率、留存）均无明显提升。你会如何从数据、用户行为、产品设计三个维度复盘这个问题，并给出下一步的迭代方向？请结合你的实际经验来谈。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "star_qa",
+      "question": "技术环节告一段落，接下来聊聊行为面试题。\n\n好的，面试到这里就结束了。感谢你的时间，后续如果有进一步安排，我们会在一周内通知你。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "star_qa",
+      "question": "好的，那我们进入行为面试环节。\n\n请分享一个你在过去工作中，遇到的一个需求分析或产品设计上的重大失误。你是如何发现这个问题的？后续采取了哪些措施来补救或调整？请用STAR法则（情境、任务、行动、结果）来具体描述。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "project_qa",
+      "question": "接下来进入项目案例环节，请结合实际项目作答。\n\n好的，面试到这里就全部结束了。感谢你今天的时间与分享，后续结果我们会在一周内通知你。祝你顺利。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "project_qa",
+      "question": "好的，那我们来聊一个具体的项目案例。\n\n假设你正在负责一款面向中小企业的协作办公SaaS产品，目前公司战略方向是快速抢占市场份额。你作为产品经理，需要主导一个“从0到1”的新功能模块——企业知识库，预计3个月内上线MVP版本。请描述你的产品规划思路，包括目标用户定义、核心功能优先级、关键里程碑，以及你会如何协调设计、开发、运营、销售等跨部门资源来推进项目落地。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      0
+    ],
+    "tech_qa": [
+      0,
+      0,
+      0
+    ],
+    "star_qa": [
+      0,
+      0
+    ],
+    "project_qa": [
+      0
+    ]
+  },
+  "section_scores": {
+    "self_intro": 0,
+    "tech_qa": 0,
+    "star_qa": 0,
+    "project_qa": 0
+  },
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 1,
+  "session_status": "finished",
+  "completed_stages": [
+    "self_intro",
+    "tech_qa",
+    "star_qa"
+  ],
+  "target_position": "产品经理",
+  "user_assets": {
+    "target_position": "产品经理"
+  },
+  "updated_at": 1784357079
+}

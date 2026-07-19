@@ -1,0 +1,497 @@
+[
+  {
+    "id": "c001",
+    "name": "字节跳动",
+    "industry": "互联网",
+    "size": "2000人以上",
+    "location": "北京",
+    "website": "https://www.bytedance.com",
+    "description": "字节跳动是一家以技术驱动的互联网公司，旗下拥有抖音、今日头条等产品。",
+    "culture": "始终创业，坦诚清晰，追求极致",
+    "benefits": "六险一金、免费三餐、弹性工作、年终奖金",
+    "interview_process": "简历筛选 → 笔试 → 技术一面 → 技术二面 → HR面",
+    "avg_difficulty": 4,
+    "positions": [
+      {
+        "name": "前端开发工程师",
+        "department": "抖音技术团队",
+        "requirement": "本科及以上学历，3年以上前端开发经验，熟练掌握 Vue/React，熟悉前端工程化",
+        "salary": "25-45K·15薪"
+      },
+      {
+        "name": "后端开发工程师",
+        "department": "基础架构部",
+        "requirement": "本科及以上学历，3年后端开发经验，熟练掌握 Go/Python，熟悉分布式系统设计",
+        "salary": "30-55K·15薪"
+      },
+      {
+        "name": "算法工程师",
+        "department": "推荐算法团队",
+        "requirement": "硕士及以上学历，熟悉机器学习与深度学习，有推荐系统相关经验优先",
+        "salary": "35-65K·15薪"
+      }
+    ]
+  },
+  {
+    "id": "c002",
+    "name": "腾讯",
+    "industry": "互联网",
+    "size": "2000人以上",
+    "location": "深圳",
+    "website": "https://www.tencent.com",
+    "description": "腾讯是中国领先的互联网增值服务提供商，旗下有微信、QQ等产品。",
+    "culture": "用户为本，科技向善",
+    "benefits": "五险一金、免费班车、年度体检、股票期权",
+    "interview_process": "简历筛选 → 技术一面 → 技术二面 → 总监面 → HR面",
+    "avg_difficulty": 4,
+    "positions": [
+      {
+        "name": "前端开发工程师",
+        "department": "微信事业部",
+        "requirement": "本科及以上学历，2年以上前端开发经验，熟练掌握 Vue 技术栈，熟悉小程序开发优先",
+        "salary": "20-40K·14薪"
+      },
+      {
+        "name": "产品经理",
+        "department": "QQ产品团队",
+        "requirement": "本科及以上学历，3年产品经验，熟悉社交产品，具备数据分析能力",
+        "salary": "25-45K·14薪"
+      },
+      {
+        "name": "数据分析工程师",
+        "department": "数据平台部",
+        "requirement": "本科及以上学历，熟练掌握 SQL/Python，有海量数据处理经验",
+        "salary": "22-40K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c003",
+    "name": "阿里巴巴",
+    "industry": "互联网",
+    "size": "2000人以上",
+    "location": "杭州",
+    "website": "https://www.alibaba.com",
+    "description": "阿里巴巴集团是全球领先的电子商务企业，旗下有淘宝、天猫等平台。",
+    "culture": "客户第一，团队合作，拥抱变化",
+    "benefits": "六险一金、住房补贴、年度旅游、股票期权",
+    "interview_process": "简历筛选 → 电话面试 → 技术一面 → 技术二面 → HR面",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "Java开发工程师",
+        "department": "淘宝技术部",
+        "requirement": "本科及以上学历，3年Java开发经验，熟悉 Spring Cloud 微服务架构",
+        "salary": "25-45K·16薪"
+      },
+      {
+        "name": "UI设计师",
+        "department": "天猫设计中心",
+        "requirement": "本科及以上学历，2年UI设计经验，熟练使用 Figma/Sketch，有电商设计经验优先",
+        "salary": "18-30K·16薪"
+      },
+      {
+        "name": "运营专员",
+        "department": "淘宝运营部",
+        "requirement": "本科及以上学历，1年运营经验，熟悉电商运营玩法，具备数据分析能力",
+        "salary": "12-22K·16薪"
+      }
+    ]
+  },
+  {
+    "id": "c004",
+    "name": "美团",
+    "industry": "互联网",
+    "size": "2000人以上",
+    "location": "北京",
+    "website": "https://www.meituan.com",
+    "description": "美团是中国领先的生活服务电子商务平台，覆盖餐饮、外卖、酒店等业务。",
+    "culture": "以客户为中心，长期有耐心",
+    "benefits": "五险一金、免费工餐、交通补贴、年终奖",
+    "interview_process": "简历筛选 → 技术一面 → 技术二面 → HR面",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "前端开发工程师",
+        "department": "外卖技术部",
+        "requirement": "本科及以上学历，2年前端开发经验，熟练掌握 Vue/React，熟悉移动端开发",
+        "salary": "20-38K·14薪"
+      },
+      {
+        "name": "测试工程师",
+        "department": "质量保障部",
+        "requirement": "本科及以上学历，2年测试经验，熟悉自动化测试工具，有性能测试经验优先",
+        "salary": "18-32K·14薪"
+      },
+      {
+        "name": "产品经理",
+        "department": "酒旅业务部",
+        "requirement": "本科及以上学历，3年产品经验，熟悉旅游/酒店行业，具备用户研究能力",
+        "salary": "22-40K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c005",
+    "name": "华为",
+    "industry": "通信",
+    "size": "2000人以上",
+    "location": "深圳",
+    "website": "https://www.huawei.com",
+    "description": "华为是全球领先的ICT基础设施和智能终端提供商。",
+    "culture": "以奋斗者为本，长期艰苦奋斗",
+    "benefits": "五险一金、内部虚拟股、年度体检、海外派驻机会",
+    "interview_process": "简历筛选 → 性格测试 → 技术一面 → 技术二面 → 主管面",
+    "avg_difficulty": 4,
+    "positions": [
+      {
+        "name": "通信工程师",
+        "department": "5G研发中心",
+        "requirement": "本科及以上学历，3年通信研发经验，熟悉5G协议与无线通信技术",
+        "salary": "20-40K·14薪"
+      },
+      {
+        "name": "软件工程师",
+        "department": "云计算部",
+        "requirement": "本科及以上学历，2年开发经验，熟悉 Java/Python，有云原生开发经验优先",
+        "salary": "22-42K·14薪"
+      },
+      {
+        "name": "硬件工程师",
+        "department": "终端研发部",
+        "requirement": "本科及以上学历，3年硬件开发经验，熟悉电路设计与 PCB Layout",
+        "salary": "22-40K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c006",
+    "name": "国家电网",
+    "industry": "能源",
+    "size": "2000人以上",
+    "location": "北京",
+    "website": "https://www.sgcc.com.cn",
+    "description": "国家电网有限公司是全球最大的公用事业企业，经营区域覆盖中国26个省区，供电人口超过11亿，是世界500强排名前列的央企巨头。",
+    "culture": "人民电业为人民，努力超越、追求卓越",
+    "benefits": "五险一金、企业年金、补充医疗保险、住房补贴、年终奖金、带薪年假、节日福利",
+    "interview_process": "网申 → 资格审查 → 统一笔试（行测+专业） → 半结构化面试 → 体检 → 录用",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "电气工程师",
+        "department": "电力调度控制中心",
+        "requirement": "本科及以上学历，电气工程及其自动化专业，熟悉电力系统分析与继电保护",
+        "salary": "12-20K·14薪"
+      },
+      {
+        "name": "信息技术工程师",
+        "department": "数字化部",
+        "requirement": "本科及以上学历，计算机相关专业，熟悉 Java/Python，有大数据平台开发经验优先",
+        "salary": "15-25K·14薪"
+      },
+      {
+        "name": "财务管理岗",
+        "department": "财务资产部",
+        "requirement": "本科及以上学历，会计学/财务管理专业，持有CPA证书优先",
+        "salary": "10-18K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c007",
+    "name": "中国烟草",
+    "industry": "烟草",
+    "size": "2000人以上",
+    "location": "北京",
+    "website": "https://www.tobacco.gov.cn",
+    "description": "中国烟草总公司是国家烟草专卖局下属的国有独资企业，实行专卖专营体制，年利税总额超万亿，是中国最大的国有企业之一。",
+    "culture": "国家利益至上，消费者利益至上",
+    "benefits": "六险二金、企业年金、补充公积金、年终奖金、住房补贴、节日福利、带薪年假",
+    "interview_process": "网申 → 资格初审 → 统一笔试（行测+申论+专业） → 结构化面试 → 政审 → 体检 → 录用",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "市场营销岗",
+        "department": "卷烟销售部",
+        "requirement": "本科及以上学历，市场营销相关专业，具备市场分析与策划能力",
+        "salary": "10-16K·14薪"
+      },
+      {
+        "name": "信息管理岗",
+        "department": "信息中心",
+        "requirement": "本科及以上学历，计算机相关专业，熟悉数据库管理与系统运维",
+        "salary": "12-18K·14薪"
+      },
+      {
+        "name": "法务岗",
+        "department": "法规处",
+        "requirement": "硕士及以上学历，法学专业，通过国家司法考试，熟悉行政法与合同法",
+        "salary": "13-20K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c008",
+    "name": "招商银行",
+    "industry": "金融",
+    "size": "2000人以上",
+    "location": "深圳",
+    "website": "https://www.cmbchina.com",
+    "description": "招商银行是中国领先的股份制商业银行，以零售金融见长，旗下掌上生活APP用户超亿，连续多年入选全球银行品牌价值500强。",
+    "culture": "因您而变，以客户为中心",
+    "benefits": "五险一金、企业年金、补充医疗保险、年终奖金（3-6个月）、住房补贴、餐补、年度体检",
+    "interview_process": "网申 → 简历筛选 → 在线笔试（行测+金融知识） → 无领导小组讨论 → 半结构化面试 → 体检 → 录用",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "金融科技岗",
+        "department": "信息技术部",
+        "requirement": "本科及以上学历，计算机相关专业，熟悉 Java/Python，有金融系统开发经验优先",
+        "salary": "20-35K·14薪"
+      },
+      {
+        "name": "客户经理",
+        "department": "零售金融部",
+        "requirement": "本科及以上学历，金融/经济相关专业，具备良好的沟通能力与客户服务意识",
+        "salary": "12-22K·14薪"
+      },
+      {
+        "name": "风险管理岗",
+        "department": "风险管理部",
+        "requirement": "硕士及以上学历，金融工程/统计学专业，熟悉风险计量模型，熟练使用 Python/R",
+        "salary": "18-30K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c009",
+    "name": "中金公司",
+    "industry": "金融",
+    "size": "2000人以上",
+    "location": "北京",
+    "website": "https://www.cicc.com",
+    "description": "中国国际金融股份有限公司是中国首家中外合资投资银行，在投行、财富管理、资产管理等领域具有领先地位，是金融行业头部券商。",
+    "culture": "以人为本，以国为怀，追求卓越",
+    "benefits": "五险一金、企业年金、补充医疗保险、年终奖金（6-12个月）、住房补贴、高端体检、海外培训机会",
+    "interview_process": "网申 → 简历筛选 → 在线笔试（行测+金融专业） → 多轮技术面（含建模测试） → 合伙人面试 → 录用",
+    "avg_difficulty": 4,
+    "positions": [
+      {
+        "name": "投资银行分析师",
+        "department": "投资银行部",
+        "requirement": "硕士及以上学历，金融/会计/法律专业，CPA或CFA优先，英语流利",
+        "salary": "30-60K·15薪"
+      },
+      {
+        "name": "量化研究员",
+        "department": "量化投资部",
+        "requirement": "硕士及以上学历，数学/物理/计算机专业，精通 Python/C++，有量化策略开发经验",
+        "salary": "35-70K·15薪"
+      },
+      {
+        "name": "科技岗",
+        "department": "信息技术部",
+        "requirement": "本科及以上学历，计算机相关专业，熟悉 Java/C++，有金融交易系统开发经验优先",
+        "salary": "25-45K·15薪"
+      }
+    ]
+  },
+  {
+    "id": "c010",
+    "name": "宁德时代",
+    "industry": "新能源",
+    "size": "2000人以上",
+    "location": "宁德",
+    "website": "https://www.catl.com",
+    "description": "宁德时代新能源科技股份有限公司是全球领先的动力电池系统提供商，连续多年全球动力电池装机量第一，客户涵盖特斯拉、宝马等国际车企。",
+    "culture": "创新驱动，绿色能源，成就客户",
+    "benefits": "五险一金、补充公积金、年终奖金（3-8个月）、免费食宿、购房补贴、股权激励",
+    "interview_process": "网申 → 简历筛选 → 在线测评 → 技术一面 → 技术二面 → HR面 → 录用",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "电芯研发工程师",
+        "department": "电池研发中心",
+        "requirement": "硕士及以上学历，材料科学/电化学专业，有锂电池研发经验，熟悉电化学测试方法",
+        "salary": "18-30K·14薪"
+      },
+      {
+        "name": "软件开发工程师",
+        "department": "智能制造部",
+        "requirement": "本科及以上学历，计算机相关专业，熟悉 Java/Python，有工业互联网/MES开发经验优先",
+        "salary": "15-28K·14薪"
+      },
+      {
+        "name": "供应链管理岗",
+        "department": "采购部",
+        "requirement": "本科及以上学历，供应链管理/物流专业，熟悉采购流程，英语可作为工作语言",
+        "salary": "12-20K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c011",
+    "name": "比亚迪",
+    "industry": "新能源",
+    "size": "2000人以上",
+    "location": "深圳",
+    "website": "https://www.byd.com",
+    "description": "比亚迪股份有限公司是全球领先的新能源汽车与电池制造商，业务涵盖汽车、电子、新能源、轨道交通四大板块，新能源汽车销量全球领先。",
+    "culture": "技术为王，创新为本",
+    "benefits": "五险一金、年终奖金（2-4个月）、免费班车、员工宿舍、购车优惠、内部购股",
+    "interview_process": "网申 → 简历筛选 → 部门技术面 → 综合面试 → 薪资沟通 → 录用",
+    "avg_difficulty": 2,
+    "positions": [
+      {
+        "name": "车辆工程师",
+        "department": "汽车工程研究院",
+        "requirement": "本科及以上学历，车辆工程/机械设计专业，熟练使用 CATIA/UG，有新能源汽车开发经验优先",
+        "salary": "12-22K·14薪"
+      },
+      {
+        "name": "嵌入式软件工程师",
+        "department": "电子研发部",
+        "requirement": "本科及以上学历，电子/通信/计算机专业，熟悉 C/C++，有嵌入式Linux开发经验",
+        "salary": "15-25K·14薪"
+      },
+      {
+        "name": "海外销售经理",
+        "department": "海外事业部",
+        "requirement": "本科及以上学历，国际贸易/外语专业，英语流利，熟悉海外市场开拓",
+        "salary": "15-28K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c012",
+    "name": "中芯国际",
+    "industry": "半导体",
+    "size": "2000人以上",
+    "location": "上海",
+    "website": "https://www.smics.com",
+    "description": "中芯国际集成电路制造有限公司是中国大陆规模最大、技术最先进的晶圆代工企业，提供0.35微米至7纳米制程工艺服务，是国产芯片产业链核心支柱。",
+    "culture": "诚信、务实、创新、共赢",
+    "benefits": "五险一金、补充公积金、年终奖金（2-4个月）、租房补贴、免费班车、年度体检、股权激励",
+    "interview_process": "网申 → 简历筛选 → 在线测评 → 技术一面 → 技术二面（专业面） → 主管面 → 体检 → 录用",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "工艺整合工程师",
+        "department": "工艺研发中心",
+        "requirement": "硕士及以上学历，微电子/物理/材料专业，熟悉半导体工艺流程，有FAB实习经验优先",
+        "salary": "18-28K·14薪"
+      },
+      {
+        "name": "设备工程师",
+        "department": "设备技术部",
+        "requirement": "本科及以上学历，自动化/机械/电子专业，熟悉半导体设备维护与故障排查",
+        "salary": "12-20K·14薪"
+      },
+      {
+        "name": "EDA软件开发工程师",
+        "department": "设计服务部",
+        "requirement": "硕士及以上学历，计算机/微电子专业，熟悉 C++/Python，有EDA工具开发经验优先",
+        "salary": "20-35K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c013",
+    "name": "宝洁",
+    "industry": "快消",
+    "size": "2000人以上",
+    "location": "广州",
+    "website": "https://www.pg.com.cn",
+    "description": "宝洁公司是全球最大的日用品消费品公司之一，旗下拥有海飞丝、飘柔、帮宝适、吉列等众多知名品牌，在中国市场深耕超过30年。",
+    "culture": "领导力、主人翁精神、正直、信任、追求胜利",
+    "benefits": "五险一金、补充商业保险、年终奖金（2-4个月）、弹性工作制、员工内购、海外轮岗机会、全面培训体系",
+    "interview_process": "网申 → 在线测评（性格+逻辑） → 电话面试 → 小组面试 → 一对一面试 → 终面 → 录用",
+    "avg_difficulty": 3,
+    "positions": [
+      {
+        "name": "品牌管理管培生",
+        "department": "品牌管理部",
+        "requirement": "本科及以上学历，不限专业，具备优秀的沟通与领导能力，英语流利",
+        "salary": "15-22K·14薪"
+      },
+      {
+        "name": "供应链管培生",
+        "department": "产品供应部",
+        "requirement": "本科及以上学历，理工科背景优先，具备数据分析与流程优化能力",
+        "salary": "14-20K·14薪"
+      },
+      {
+        "name": "数据分析师",
+        "department": "信息技术部",
+        "requirement": "本科及以上学历，统计学/数学/计算机专业，熟练使用 Python/SQL，有商业分析经验优先",
+        "salary": "16-25K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c014",
+    "name": "三一重工",
+    "industry": "智能制造",
+    "size": "2000人以上",
+    "location": "长沙",
+    "website": "https://www.sany.com.cn",
+    "description": "三一重工股份有限公司是全球领先的工程机械制造商，混凝土机械全球第一，挖掘机械国内第一，正在全面推进智能制造与工业互联网转型。",
+    "culture": "品质改变世界，创建一流企业",
+    "benefits": "五险一金、年终奖金（2-6个月）、免费食宿、购房无息贷款、员工持股计划、技能培训",
+    "interview_process": "网申 → 简历筛选 → 在线测评 → 技术面 → 综合面（含英语测试） → 体检 → 录用",
+    "avg_difficulty": 2,
+    "positions": [
+      {
+        "name": "机械工程师",
+        "department": "重机研究院",
+        "requirement": "本科及以上学历，机械设计制造专业，熟练使用 SolidWorks/ProE，有工程机械设计经验优先",
+        "salary": "10-18K·14薪"
+      },
+      {
+        "name": "工业互联网工程师",
+        "department": "树根互联",
+        "requirement": "本科及以上学历，计算机相关专业，熟悉 IoT 平台技术，有工业互联网开发经验优先",
+        "salary": "15-25K·14薪"
+      },
+      {
+        "name": "海外营销经理",
+        "department": "国际事业部",
+        "requirement": "本科及以上学历，机械/营销/外语专业，英语流利，能适应海外出差",
+        "salary": "12-22K·14薪"
+      }
+    ]
+  },
+  {
+    "id": "c015",
+    "name": "大疆创新",
+    "industry": "智能硬件",
+    "size": "2000人以上",
+    "location": "深圳",
+    "website": "https://www.dji.com",
+    "description": "大疆创新科技有限公司是全球领先的无人机与航拍影像系统制造商，占据全球消费级无人机70%以上市场份额，在机器人控制、AI视觉领域技术领先。",
+    "culture": "激极尽志，求真品诚",
+    "benefits": "五险一金、年终奖金（3-6个月）、弹性工作、免费三餐、健身房、产品内购、专利奖励",
+    "interview_process": "网申 → 简历筛选 → 在线笔试 → 技术一面 → 技术二面（含算法题） → 综合面试 → 录用",
+    "avg_difficulty": 4,
+    "positions": [
+      {
+        "name": "嵌入式软件工程师",
+        "department": "飞行系统研发部",
+        "requirement": "本科及以上学历，电子/计算机专业，精通 C/C++，有 RTOS 或 Linux 嵌入式开发经验",
+        "salary": "20-38K·15薪"
+      },
+      {
+        "name": "算法工程师",
+        "department": "感知算法部",
+        "requirement": "硕士及以上学历，计算机视觉/机器学习方向，精通 Python/C++，有 SLAM/目标检测项目经验",
+        "salary": "30-55K·15薪"
+      },
+      {
+        "name": "结构工程师",
+        "department": "机械结构部",
+        "requirement": "本科及以上学历，机械设计/材料工程专业，熟练使用 CATIA/ProE，有精密结构设计经验",
+        "salary": "18-30K·15薪"
+      }
+    ]
+  }
+]
