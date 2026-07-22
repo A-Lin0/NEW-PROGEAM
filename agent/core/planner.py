@@ -474,9 +474,22 @@ class TaskPlanner:
         dialogue_history = session_ctx.get("dialogue_history", []) or session_ctx.get("history", [])
         return {
             "interview_history": dialogue_history,
-            "target_position": user_assets.get("target_position", ""),
+            "transcript": dialogue_history,  # 兼容旧参数名
+            "target_position": (
+                session_ctx.get("target_position")
+                or user_assets.get("target_position", "")
+            ),
+            "target_company": (
+                session_ctx.get("target_company")
+                or user_assets.get("target_company", "")
+            ),
             "interview_type": session_ctx.get("interview_type", "tech_1"),
             "difficulty": session_ctx.get("difficulty", "middle"),
+            # Phase 14 修复：传递面试Agent已计算的评分数据，避免重新生成时评分全为0
+            "question_records": session_ctx.get("question_records", []),
+            "stage_scores": session_ctx.get("stage_scores", {}),
+            "section_scores": session_ctx.get("section_scores", {}),
+            "total_score": session_ctx.get("total_score", 0),
         }
 
     # ==================== 工具方法 ====================

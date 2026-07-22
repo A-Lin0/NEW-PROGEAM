@@ -21,11 +21,16 @@ class InterviewService:
         user_id: UUID,
         company_id: Optional[UUID] = None,
         position: str = "",
+        company_name: Optional[str] = None,
     ) -> Interview:
-        """创建面试会话"""
+        """创建面试会话
+
+        :param company_name: 用户在前端选择的目标公司名称（字符串持久化）
+        """
         interview = Interview(
             user_id=user_id,
             company_id=company_id,
+            target_company_name=company_name,
             position=position,
             status="in_progress",
             questions_answers=[],

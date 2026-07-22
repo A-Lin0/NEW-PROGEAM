@@ -11,6 +11,7 @@
 """
 
 import json
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,24 @@ from ..middleware.log import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/review", tags=["面试复盘"])
+
+
+def _to_iso_with_tz(dt) -> str:
+    """将数据库中的 naive UTC 时间转换为带时区的 ISO 字符串
+
+    数据库列定义为 ``default=datetime.utcnow``，存储的是无时区的 UTC 时间。
+    直接 ``isoformat()`` 会得到 ``2026-07-20T07:30:45``（无时区标识），
+    前端 ``new Date()`` 会将其误判为本地时间，导致显示比实际慢 8 小时。
+
+    本函数显式为其附加 ``+00:00`` 时区标识，前端解析后可自动转换为本地时间。
+    """
+    if dt is None:
+        return None
+    # 已经带时区的时间直接 isoformat
+    if dt.tzinfo is not None:
+        return dt.isoformat()
+    # naive UTC 时间 → 显式标注 UTC
+    return dt.replace(tzinfo=timezone.utc).isoformat()
 
 
 def get_agent_service(
@@ -59,6 +78,49 @@ def _calc_duration_minutes(interview: Interview) -> int:
         return 0
     delta = interview.updated_at - interview.created_at
     return max(0, int(delta.total_seconds() // 60))
+
+
+def _calc_duration_seconds(interview: Interview) -> int:
+    """根据 created_at 和 updated_at 计算面试时长（秒）"""
+    if not interview.created_at or not interview.updated_at:
+        return 0
+    delta = interview.updated_at - interview.created_at
+    return max(0, int(delta.total_seconds()))
+
+
+# 复盘评估JSON的关键字段集合（用于识别混入消息流的评估对象）
+_EVALUATION_KEYS = {
+    "total_score", "section_scores", "stage_analysis",
+    "question_by_question", "overall_problems",
+    "improvement_plan", "overall_comment",
+    "dimension_scores", "dimension_improvements",
+    "stages",
+}
+
+
+def _try_parse_evaluation(content: str):
+    """检测 content 是否为复盘评估 JSON 对象
+
+    返回：
+    - 解析成功的 dict（命中评估字段）→ 返回该 dict
+    - 解析失败或非评估对象 → 返回 None
+    """
+    if not content:
+        return None
+    text = content.strip()
+    # 必须以 { 开头、} 结尾才可能是 JSON 对象
+    if not (text.startswith("{") and text.endswith("}")):
+        return None
+    try:
+        obj = json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(obj, dict):
+        return None
+    # 命中任意评估字段即判定为评估对象
+    if _EVALUATION_KEYS & set(obj.keys()):
+        return obj
+    return None
 
 
 def _calc_difficulty(interview: Interview) -> int:
@@ -150,14 +212,74 @@ async def generate_review(
             logger.warning(f"从 Redis 恢复面试数据失败: {e}")
 
     if not interview.questions_answers:
-        raise HTTPException(status_code=400, detail="暂无面试记录可供复盘")
+        raise HTTPException(status_code=400, detail="本场面试无有效答题记录，无法重新生成报告")
 
-    # 构建 user_config
+    # Phase 14 修复：重新生成前确保 Redis session_ctx 中的评分数据完整
+    # 避免 session_ctx 中 total_score/section_scores/question_records 丢失导致重新生成时评分为0
+    if orchestrator:
+        try:
+            session_ctx = await orchestrator._load_session(session_id) or {}
+            # 从 Interview 表恢复 question_records 到 session_ctx
+            if not session_ctx.get("question_records") and interview.questions_answers:
+                session_ctx["question_records"] = [
+                    {
+                        "stage": qa.get("stage", ""),
+                        "question": qa.get("question", ""),
+                        "answer": qa.get("answer", ""),
+                        "review": qa.get("feedback", ""),
+                        "score": qa.get("score", 0),
+                        "skipped": not qa.get("answer", "").strip(),
+                    }
+                    for qa in interview.questions_answers
+                ]
+            # 从 Interview 表恢复评分数据到 session_ctx
+            if not session_ctx.get("total_score") and interview.overall_score:
+                session_ctx["total_score"] = interview.overall_score
+            if not session_ctx.get("section_scores") and interview.phase_scores:
+                session_ctx["section_scores"] = interview.phase_scores
+            # 确保岗位和公司信息完整
+            session_ctx["target_position"] = (
+                session_ctx.get("target_position")
+                or interview.position
+                or ""
+            )
+            user_assets = session_ctx.get("user_assets", {})
+            user_assets["target_position"] = session_ctx["target_position"]
+            if interview.target_company_name:
+                session_ctx["target_company"] = interview.target_company_name
+                user_assets["target_company"] = interview.target_company_name
+            session_ctx["user_assets"] = user_assets
+            # 重置 session_status 为 finished（确保 planner 路由到 review_agent）
+            session_ctx["session_status"] = "finished"
+            await orchestrator._save_session(session_id, session_ctx)
+            logger.info(
+                f"重新生成前同步 session_ctx | interview_id={interview_id} "
+                f"questions={len(session_ctx.get('question_records', []))} "
+                f"total_score={session_ctx.get('total_score', 0)}"
+            )
+        except Exception as e:
+            logger.warning(f"重新生成前同步 session_ctx 失败: {e}")
+
+    # 构建 user_config（包含公司信息，确保 ReviewAgent 上下文完整）
     user_config = {
         "target_position": interview.position or "",
     }
+    # 优先使用 target_company_name
+    if interview.target_company_name:
+        user_config["target_company"] = interview.target_company_name
     if interview.company_id:
         user_config["target_company_id"] = str(interview.company_id)
+        if "target_company" not in user_config:
+            try:
+                from ..models.company import Company
+                company_result = await db.execute(
+                    select(Company.name).where(Company.id == interview.company_id)
+                )
+                company_name = company_result.scalar_one_or_none()
+                if company_name:
+                    user_config["target_company"] = company_name
+            except Exception:
+                pass
 
     full_report = []
 
@@ -268,9 +390,16 @@ async def list_reviews(
         if interview.status != "completed" and not interview.review_report:
             continue
 
-        # 公司信息
-        company = companies_map.get(interview.company_id) if interview.company_id else None
-        company_name = company.name if company else ""
+        # 公司信息优先级：target_company_name（用户输入字符串）> company_id 关联查询 > "未指定公司"
+        company_name = ""
+        if interview.target_company_name:
+            company_name = interview.target_company_name
+        if not company_name:
+            company = companies_map.get(interview.company_id) if interview.company_id else None
+            company_name = company.name if company else ""
+        # 兜底：若用户未指定公司，返回友好提示而非空字符串
+        if not company_name:
+            company_name = "未指定公司"
 
         # 完成阶段中文标签
         completed_stage = STAGE_LABEL_MAP.get(interview.phase or "", interview.phase or "")
@@ -280,17 +409,50 @@ async def list_reviews(
             "position": interview.position or "未知岗位",
             "overall_score": interview.overall_score or 0,
             "has_review": bool(interview.review_report),
-            "created_at": interview.created_at.isoformat() if interview.created_at else None,
+            "created_at": _to_iso_with_tz(interview.created_at),
             # 新增完整字段
             "company_id": str(interview.company_id) if interview.company_id else None,
             "company_name": company_name,
             "difficulty": _calc_difficulty(interview),
             "duration": _calc_duration_minutes(interview),
+            "duration_seconds": _calc_duration_seconds(interview),
             "completed_stage": completed_stage,
             # 复盘报告状态标记
             "status": interview.status,
         })
     return {"reviews": reviews}
+
+
+# 对话消息类型推断关键词
+_FEEDBACK_KEYWORDS = ("优点", "不足", "改进", "点评", "建议", "亮点", "欠缺", "提升空间", "回答得", "评分")
+_TRANSITION_KEYWORDS = ("进入", "下一阶段", "环节", "接下来我们", "下面进入", "到此结束", " transitions", "过渡")
+_GREETING_KEYWORDS = ("你好", "欢迎", "我是", "面试官", "开始面试", "请做一下自我介绍", "请先做")
+_CLOSING_KEYWORDS = ("面试结束", "感谢你的参与", "本次面试", "祝你好运", "感谢您", "感谢参加")
+_COMMAND_INPUTS = {"开始面试", "下一题", "结束面试", "skip", "next", "end", "start"}
+
+
+def _infer_message_type(role: str, content: str) -> str:
+    """根据角色和内容推断消息类型
+
+    - user 角色：默认 answer，控制命令标记为 command
+    - assistant 角色：按内容关键词区分 question/feedback/transition/greeting/closing
+    """
+    text = (content or "").strip()
+    if role == "user":
+        if text in _COMMAND_INPUTS or text.startswith("（面试结束）"):
+            return "command"
+        return "answer"
+    # assistant 角色
+    if any(k in text for k in _CLOSING_KEYWORDS):
+        return "closing"
+    if any(k in text for k in _FEEDBACK_KEYWORDS):
+        # 优先识别点评（点评通常包含「优点/不足/改进」等词）
+        return "feedback"
+    if any(k in text for k in _TRANSITION_KEYWORDS):
+        return "transition"
+    if any(k in text for k in _GREETING_KEYWORDS):
+        return "greeting"
+    return "question"
 
 
 @router.get("/{interview_id}/conversation")
@@ -301,13 +463,17 @@ async def get_conversation(
 ):
     """获取面试对话历史（完整还原整场面试问答过程）
 
-    数据来源：Interview.questions_answers JSON 数组
+    数据来源（按优先级）：
+    1. agent_dialogue_records 表：通过 AgentSession.session_id=str(interview_id) 关联，
+       查询全量对话记录（含开场白、所有提问、回答、点评、过渡话术、结束语），
+       按 seq 正序排列，禁止过滤任何消息类型
+    2. 兜底：Interview.questions_answers JSON 数组（解析为 question/answer/feedback 三类消息）
+
     转换规则：
-    - 每个 qa 项展开为 2-3 条消息：
-      * AI 面试官提问题干（role=interviewer, content=question）
-      * 候选人回答（role=user, content=answer）
-      * AI 点评（role=interviewer, content=feedback，仅当 feedback 非空时添加）
-    - 按 questions_answers 数组顺序正序排列，保证时间线正确
+    - role=assistant → role=interviewer（前端期望）
+    - role=user → role=user
+    - role=system → 跳过（系统调度信号，非面试对话内容）
+    - type 字段：根据内容关键词推断（question/answer/feedback/transition/greeting/closing/command）
 
     异常处理：
     - 记录不存在或已删除 → 404
@@ -317,7 +483,7 @@ async def get_conversation(
     返回结构：
     {
       "interview": {基础信息：公司/岗位/时间/时长},
-      "messages": [{role, content, time}],
+      "messages": [{role, content, type, time, seq}],
       "has_data": bool
     }
     """
@@ -332,10 +498,12 @@ async def get_conversation(
     if str(interview.user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="无权限查看该面试记录")
 
-    # 公司信息
+    # 公司信息优先级：target_company_name（用户输入字符串）> company_id 关联查询 > "未指定公司"
     company_name = ""
     company_id = None
-    if interview.company_id:
+    if interview.target_company_name:
+        company_name = interview.target_company_name
+    if not company_name and interview.company_id:
         result = await db.execute(
             select(Company).where(Company.id == interview.company_id)
         )
@@ -343,41 +511,118 @@ async def get_conversation(
         if company:
             company_name = company.name
             company_id = str(company.id)
+    # 兜底：若用户未指定公司，返回友好提示而非空字符串
+    if not company_name:
+        company_name = "未指定公司"
 
-    # 构造对话消息列表
+    # ============ 主数据源：agent_dialogue_records 全量对话记录 ============
+    # 同一 interview_id 在 agent_sessions 表中可能存在多条记录
+    # （interview_agent 会话 + review_agent 会话），需要聚合查询全部对话记录
     messages = []
-    qa_list = interview.questions_answers or []
-    for idx, qa in enumerate(qa_list):
-        if not isinstance(qa, dict):
-            continue
-        question = (qa.get("question") or "").strip()
-        answer = (qa.get("answer") or "").strip()
-        feedback = (qa.get("feedback") or "").strip()
+    # 评估JSON对象（若 review_agent 把整份评估报告作为一条消息写入，需抽取为独立字段）
+    evaluation = None
+    try:
+        from ..models.session import AgentSession, AgentDialogueRecord
 
-        # AI 提问（必须有题干才输出）
-        if question:
-            messages.append({
-                "role": "interviewer",
-                "content": question,
-                "type": "question",
-                "index": idx,
-            })
-        # 用户回答
-        if answer:
-            messages.append({
-                "role": "user",
-                "content": answer,
-                "type": "answer",
-                "index": idx,
-            })
-        # AI 点评（仅当有反馈内容时输出）
-        if feedback:
-            messages.append({
-                "role": "interviewer",
-                "content": feedback,
-                "type": "feedback",
-                "index": idx,
-            })
+        # 优先取 interview_agent 的 session（面试原始对话），
+        # 若无（如老数据已清理）则取 review_agent 的 session（复盘时复制的完整对话快照）
+        session_result = await db.execute(
+            select(AgentSession)
+            .where(AgentSession.session_id == str(interview_id))
+            .order_by(AgentSession.target_agent.asc())  # interview_agent 排在前
+        )
+        agent_sessions = list(session_result.scalars().all())
+
+        # 收集所有 session_pk
+        session_pks = [s.id for s in agent_sessions]
+        # 记录 session_pk 到 target_agent 的映射，用于排序
+        pk_to_agent = {s.id: s.target_agent for s in agent_sessions}
+
+        if session_pks:
+            # 查询所有 session 的全量对话记录，仅过滤 system 调度信号
+            # 排序规则：interview_agent 优先，其次 review_agent；同 session 内按 seq 正序
+            dialogue_result = await db.execute(
+                select(AgentDialogueRecord)
+                .where(AgentDialogueRecord.session_pk.in_(session_pks))
+                .where(AgentDialogueRecord.role != "system")  # 排除系统调度信号
+                .order_by(
+                    AgentDialogueRecord.session_pk.asc(),
+                    AgentDialogueRecord.seq.asc(),
+                )
+            )
+            dialogues = list(dialogue_result.scalars().all())
+
+            # 若 interview_agent session 存在且有对话，则仅使用 interview_agent 数据
+            # 否则使用 review_agent 数据（兼容老数据场景）
+            interview_pks = [pk for pk, ag in pk_to_agent.items() if ag == "interview_agent"]
+            review_pks = [pk for pk, ag in pk_to_agent.items() if ag == "review_agent"]
+
+            iv_dialogues = [d for d in dialogues if d.session_pk in interview_pks]
+            rv_dialogues = [d for d in dialogues if d.session_pk in review_pks]
+
+            # 优先使用 interview_agent 的对话；若为空则用 review_agent 的对话
+            use_dialogues = iv_dialogues if iv_dialogues else rv_dialogues
+
+            # 二次保险：按 created_at 升序排序，保证时间线正确
+            use_dialogues.sort(key=lambda x: (x.created_at or x.seq, x.seq))
+
+            for d in use_dialogues:
+                content = (d.content or "").strip()
+                if not content:
+                    continue
+
+                # 【关键】检测评估JSON：若 content 是含 total_score/question_by_question
+                # 等字段的 JSON 对象，则抽取为独立 evaluation 字段，不混入 messages 数组
+                eval_obj = _try_parse_evaluation(content)
+                if eval_obj is not None:
+                    evaluation = eval_obj
+                    logger.info(f"抽取评估JSON为独立字段 interview_id={interview_id} seq={d.seq}")
+                    continue
+
+                # role 映射：assistant → interviewer
+                front_role = "interviewer" if d.role == "assistant" else d.role
+                msg_type = _infer_message_type(d.role, content)
+                messages.append({
+                    "role": front_role,
+                    "content": content,
+                    "type": msg_type,
+                    "seq": d.seq,
+                    "time": _to_iso_with_tz(d.created_at),
+                })
+    except Exception as e:
+        logger.warning(f"从 agent_dialogue_records 查询对话历史失败 interview_id={interview_id}: {e}")
+
+    # ============ 兜底数据源：Interview.questions_answers JSON 数组 ============
+    if not messages:
+        qa_list = interview.questions_answers or []
+        for idx, qa in enumerate(qa_list):
+            if not isinstance(qa, dict):
+                continue
+            question = (qa.get("question") or "").strip()
+            answer = (qa.get("answer") or "").strip()
+            feedback = (qa.get("feedback") or "").strip()
+
+            if question:
+                messages.append({
+                    "role": "interviewer",
+                    "content": question,
+                    "type": _infer_message_type("assistant", question),
+                    "index": idx,
+                })
+            if answer:
+                messages.append({
+                    "role": "user",
+                    "content": answer,
+                    "type": "answer",
+                    "index": idx,
+                })
+            if feedback:
+                messages.append({
+                    "role": "interviewer",
+                    "content": feedback,
+                    "type": "feedback",
+                    "index": idx,
+                })
 
     return {
         "interview": {
@@ -385,12 +630,15 @@ async def get_conversation(
             "company_id": company_id,
             "company_name": company_name,
             "position": interview.position or "",
-            "created_at": interview.created_at.isoformat() if interview.created_at else None,
+            "created_at": _to_iso_with_tz(interview.created_at),
             "duration": _calc_duration_minutes(interview),
+            "duration_seconds": _calc_duration_seconds(interview),
             "completed_stage": STAGE_LABEL_MAP.get(interview.phase or "", interview.phase or ""),
             "total_messages": len(messages),
+            "total_score": interview.overall_score if interview.overall_score is not None else 0,
         },
         "messages": messages,
+        "evaluation": evaluation,
         "has_data": len(messages) > 0,
     }
 

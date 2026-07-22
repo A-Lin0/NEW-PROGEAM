@@ -105,8 +105,8 @@
             <span v-else class="text-muted">未评分</span>
           </template>
         </el-table-column>
-        <!-- 日期：格式优化 -->
-        <el-table-column prop="created_at" label="日期" width="140">
+        <!-- 日期：精确到秒，含时区转换 -->
+        <el-table-column prop="created_at" label="面试时间" width="180">
           <template #default="{ row }">
             <span>{{ formatDate(row.created_at) }}</span>
           </template>
@@ -236,43 +236,79 @@
 
           <!-- 板块2：逐题复盘 -->
           <el-tab-pane label="逐题复盘" name="questions">
-            <div v-if="reportData.question_by_question && reportData.question_by_question.length" class="qa-list">
+            <div v-if="groupedQuestions.length" class="qa-list">
+              <!-- 按阶段分组展示 -->
               <div
-                v-for="(q, i) in reportData.question_by_question"
-                :key="i"
-                class="qa-item"
+                v-for="(group, gi) in groupedQuestions"
+                :key="gi"
+                class="qa-stage-group"
               >
-                <div class="qa-header" @click="toggleQuestion(i)">
-                  <div class="qa-header-left">
-                    <el-tag size="small" type="info">{{ q.stage }}</el-tag>
-                    <span class="qa-question-text">{{ q.question }}</span>
-                  </div>
-                  <div class="qa-header-right">
-                    <span class="qa-score" :class="scoreClass(q.score)">{{ q.score || 0 }}分</span>
-                    <el-icon class="qa-expand-icon" :class="{ expanded: expandedQuestions[i] }">
-                      <ArrowDown />
-                    </el-icon>
-                  </div>
+                <!-- 阶段分隔标题栏 -->
+                <div class="qa-stage-header">
+                  <span class="qa-stage-name">{{ group.label }}</span>
+                  <span class="qa-stage-meta">共 {{ group.items.length }} 题 ｜ 阶段得分 {{ group.avgScore }} / 100</span>
                 </div>
-                <!-- 新增：展开/收起 -->
-                <div v-show="expandedQuestions[i]" class="qa-body">
-                  <div class="qa-answer"><strong>A:</strong> {{ q.answer }}</div>
-                  <div v-if="q.advantages && q.advantages.length" class="qa-adv">
-                    <span class="tag-pos">优点</span>
-                    <ul><li v-for="(a, j) in q.advantages" :key="j">{{ a }}</li></ul>
+
+                <!-- 阶段内题目列表 -->
+                <div
+                  v-for="item in group.items"
+                  :key="item.idx"
+                  class="qa-item"
+                >
+                  <div class="qa-header" @click="toggleQuestion(item.idx)">
+                    <div class="qa-header-left">
+                      <el-tag size="small" type="info">第{{ item.seqInGroup }}题</el-tag>
+                      <span class="qa-question-text">{{ item.q.question }}</span>
+                    </div>
+                    <div class="qa-header-right">
+                      <span class="qa-score" :class="scoreClass(item.q.score)">{{ item.q.score || 0 }}分 / 100分</span>
+                      <el-icon class="qa-expand-icon" :class="{ expanded: expandedQuestions[item.idx] }">
+                        <ArrowDown />
+                      </el-icon>
+                    </div>
                   </div>
-                  <div v-if="q.shortcomings && q.shortcomings.length" class="qa-dis">
-                    <span class="tag-neg">不足</span>
-                    <ul><li v-for="(s, j) in q.shortcomings" :key="j">{{ s }}</li></ul>
-                  </div>
-                  <div v-if="q.optimization" class="qa-opt">
-                    <span class="tag-opt">优化</span>
-                    <span>{{ q.optimization }}</span>
-                  </div>
-                  <!-- 新增：参考答案 -->
-                  <div v-if="q.reference_answer" class="qa-ref">
-                    <span class="tag-ref">参考答案</span>
-                    <p>{{ q.reference_answer }}</p>
+                  <!-- 题目详细内容（展开/收起） -->
+                  <div v-show="expandedQuestions[item.idx]" class="qa-body">
+                    <!-- 题干（加粗突出） -->
+                    <div class="qa-question"><strong>题目：</strong> {{ item.q.question }}</div>
+                    <!-- 答题区（语义化标识，替代原 A:） -->
+                    <div class="qa-answer">
+                      <div class="qa-answer-title">我的回答：</div>
+                      <div class="qa-answer-content">
+                        <template v-if="item.q.answer && String(item.q.answer).trim() && item.q.answer !== '跳过'">
+                          {{ item.q.answer }}
+                        </template>
+                        <span v-else class="qa-skipped">未作答（跳过）</span>
+                      </div>
+                    </div>
+                    <!-- 点评三段式：优点 + 不足 + 优化建议 -->
+                    <div class="qa-review-block">
+                      <div class="qa-review-title">【点评】</div>
+                      <div class="qa-adv">
+                        <span class="tag-pos">优点</span>
+                        <ul v-if="item.q.advantages && item.q.advantages.length">
+                          <li v-for="(a, j) in item.q.advantages" :key="j">{{ a }}</li>
+                        </ul>
+                        <span v-else class="qa-empty">本次回答未体现明显优势</span>
+                      </div>
+                      <div class="qa-dis">
+                        <span class="tag-neg">不足</span>
+                        <ul v-if="item.q.shortcomings && item.q.shortcomings.length">
+                          <li v-for="(s, j) in item.q.shortcomings" :key="j">{{ s }}</li>
+                        </ul>
+                        <span v-else class="qa-empty">暂无对应评价</span>
+                      </div>
+                      <div class="qa-opt">
+                        <span class="tag-opt">优化建议</span>
+                        <span v-if="item.q.optimization">{{ item.q.optimization }}</span>
+                        <span v-else class="qa-empty">暂无对应评价</span>
+                      </div>
+                    </div>
+                    <!-- 参考答题思路（折叠项） -->
+                    <details v-if="item.q.reference_answer" class="qa-ref-details">
+                      <summary class="tag-ref">查看参考答题框架</summary>
+                      <p class="qa-ref-content">{{ item.q.reference_answer }}</p>
+                    </details>
                   </div>
                 </div>
               </div>
@@ -362,11 +398,11 @@
         <div v-if="dialogueInfo" class="dialogue-header">
           <div class="dialogue-header-item">
             <span class="label">目标公司：</span>
-            <span class="value">{{ dialogueInfo.company_name || '-' }}</span>
+            <span class="value">{{ dialogueInfo.company_name || '未指定公司' }}</span>
           </div>
           <div class="dialogue-header-item">
             <span class="label">面试岗位：</span>
-            <span class="value">{{ dialogueInfo.position || '-' }}</span>
+            <span class="value">{{ dialogueInfo.position || '未指定岗位' }}</span>
           </div>
           <div class="dialogue-header-item">
             <span class="label">面试时间：</span>
@@ -374,7 +410,11 @@
           </div>
           <div class="dialogue-header-item">
             <span class="label">总时长：</span>
-            <span class="value">{{ formatDuration(dialogueInfo.duration) }}</span>
+            <span class="value">{{ formatDurationSeconds(dialogueInfo.duration_seconds) }}</span>
+          </div>
+          <div class="dialogue-header-item">
+            <span class="label">面试总分：</span>
+            <span class="value">{{ dialogueInfo.total_score != null ? dialogueInfo.total_score + ' 分' : '未评分' }}</span>
           </div>
         </div>
 
@@ -508,6 +548,49 @@ function onSortChange() {
 
 /* ============ P0 新增：工具函数 ============ */
 
+/* 阶段编码 → 中文语义映射（禁止前端直接暴露英文编码） */
+const STAGE_LABEL_MAP = {
+  intro: '开场白',
+  self_intro: '自我介绍',
+  tech_qa: '技术问答',
+  star_qa: '行为面试',
+  project_qa: '案例分析',
+  reverse_qa: '反问环节',
+  end: '已结束',
+  completed: '已完成',
+}
+
+/* 阶段顺序（用于分组排序） */
+const STAGE_ORDER = ['intro', 'self_intro', 'tech_qa', 'star_qa', 'project_qa', 'reverse_qa', 'end', 'completed']
+
+/* 按阶段分组题目（用于逐题复盘 Tab 渲染） */
+const groupedQuestions = computed(() => {
+  const list = reportData.value?.question_by_question || []
+  if (!list.length) return []
+  // 按阶段聚合
+  const groupMap = new Map()
+  list.forEach((q, idx) => {
+    const stageKey = q.stage || 'unknown'
+    if (!groupMap.has(stageKey)) {
+      groupMap.set(stageKey, { stage: stageKey, label: STAGE_LABEL_MAP[stageKey] || stageKey, items: [] })
+    }
+    groupMap.get(stageKey).items.push({ q, idx, seqInGroup: groupMap.get(stageKey).items.length + 1 })
+  })
+  // 按 STAGE_ORDER 排序
+  const groups = Array.from(groupMap.values())
+  groups.sort((a, b) => {
+    const ia = STAGE_ORDER.indexOf(a.stage)
+    const ib = STAGE_ORDER.indexOf(b.stage)
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+  })
+  // 计算每个阶段的平均分
+  groups.forEach(g => {
+    const scores = g.items.map(it => Number(it.q.score) || 0)
+    g.avgScore = scores.length ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 0
+  })
+  return groups
+})
+
 /* 新增：等级标签 */
 function gradeLabel(score) {
   if (score == null) return '未评分'
@@ -524,17 +607,19 @@ function gradeTagType(score) {
   return 'danger'
 }
 
-/* 新增：日期格式化 */
+/* 新增：日期格式化（精确到秒，自动处理 UTC 时区转换） */
 function formatDate(dateStr) {
   if (!dateStr) return '-'
   try {
+    // 后端返回带 +00:00 时区的 ISO 字符串，new Date() 会自动转为本地时间
     const d = new Date(dateStr)
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
     const h = String(d.getHours()).padStart(2, '0')
     const min = String(d.getMinutes()).padStart(2, '0')
-    return `${y}-${m}-${day} ${h}:${min}`
+    const sec = String(d.getSeconds()).padStart(2, '0')
+    return `${y}-${m}-${day} ${h}:${min}:${sec}`
   } catch {
     return dateStr
   }
@@ -547,6 +632,14 @@ function formatDuration(minutes) {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return m > 0 ? `${h}小时${m}分钟` : `${h}小时`
+}
+
+/* 新增：秒级时长格式化（X分X秒） */
+function formatDurationSeconds(seconds) {
+  if (seconds == null || seconds <= 0) return '0分0秒'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}分${s}秒`
 }
 
 /* ============ P0 新增：操作功能 ============ */
@@ -1009,11 +1102,37 @@ async function generateReport(row) {
   color: #909399;
 }
 
-/* ============ P1 优化：逐题分析（支持展开/收起） ============ */
+/* ============ P1 优化：逐题分析（支持展开/收起 + 阶段分组） ============ */
 .qa-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+}
+/* 阶段分组容器 */
+.qa-stage-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* 阶段分隔标题栏 */
+.qa-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #ecf5ff 0%, #f0f7ff 100%);
+  border-left: 4px solid #409eff;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.qa-stage-name {
+  font-weight: 600;
+  color: #303133;
+  font-size: 15px;
+}
+.qa-stage-meta {
+  font-size: 12px;
+  color: #606266;
 }
 .qa-item {
   border-radius: 8px;
@@ -1077,31 +1196,80 @@ async function generateReport(row) {
   border-top: 1px solid #ebeef5;
   background: #fff;
 }
-.qa-question, .qa-answer {
-  margin-bottom: 8px;
+.qa-question {
+  margin-bottom: 12px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: #303133;
+  font-weight: 500;
+}
+/* 答题区 */
+.qa-answer {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: #fafbfc;
+  border-radius: 6px;
+  border-left: 3px solid #909399;
+}
+.qa-answer-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 4px;
+}
+.qa-answer-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #303133;
+  white-space: pre-wrap;
+}
+.qa-skipped {
+  color: #c0c4cc;
+  font-style: italic;
+}
+/* 点评三段式 */
+.qa-review-block {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff8e1;
+  border-radius: 6px;
+  border-left: 3px solid #e6a23c;
+}
+.qa-review-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6a23c;
+  margin-bottom: 8px;
 }
 .qa-adv, .qa-dis, .qa-opt, .qa-ref {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 .qa-adv ul, .qa-dis ul {
   margin: 4px 0 0 16px;
   padding: 0;
 }
-.qa-ref {
+.qa-empty {
+  color: #c0c4cc;
+  font-style: italic;
+}
+/* 参考答题思路折叠项 */
+.qa-ref-details {
+  margin-top: 12px;
   background: #ecf5ff;
   padding: 10px 12px;
   border-radius: 6px;
-  margin-top: 10px;
 }
-.qa-ref p {
-  margin: 6px 0 0;
+.qa-ref-details summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.qa-ref-content {
+  margin: 8px 0 0;
   color: #606266;
-  line-height: 1.6;
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 .tag-pos, .tag-neg, .tag-opt, .tag-ref {

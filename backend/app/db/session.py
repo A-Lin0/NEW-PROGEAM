@@ -70,6 +70,43 @@ async def init_db():
     """初始化数据库表"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # SQLite/PostgreSQL 兼容的字段增量迁移：检查并补全 interviews.target_company_name 字段
+    await _migrate_interview_target_company_name()
+
+
+async def _migrate_interview_target_company_name():
+    """增量迁移：为 interviews 表添加 target_company_name 字段（如果不存在）
+
+    用于持久化用户在前端选择的目标公司名称，避免依赖 company_id 关联丢失。
+    兼容 SQLite 与 PostgreSQL。
+    """
+    from sqlalchemy import text
+    async with async_session_factory() as session:
+        try:
+            if settings.DB_TYPE == "sqlite":
+                # SQLite 通过 PRAGMA table_info 检查字段
+                result = await session.execute(text("PRAGMA table_info(interviews)"))
+                columns = [row[1] for row in result]
+                if "target_company_name" not in columns:
+                    await session.execute(
+                        text("ALTER TABLE interviews ADD COLUMN target_company_name VARCHAR(200)")
+                    )
+                    await session.commit()
+                    print("[migration] 已添加 interviews.target_company_name 字段")
+            else:
+                # PostgreSQL 通过 information_schema 检查字段
+                result = await session.execute(text("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name='interviews' AND column_name='target_company_name'
+                """))
+                if not result.first():
+                    await session.execute(
+                        text("ALTER TABLE interviews ADD COLUMN target_company_name VARCHAR(200)")
+                    )
+                    await session.commit()
+                    print("[migration] 已添加 interviews.target_company_name 字段")
+        except Exception as e:
+            print(f"[migration] target_company_name 检查/添加失败（可忽略）: {e}")
 
 
 async def close_db():

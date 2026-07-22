@@ -1022,6 +1022,10 @@ class InterviewAgent:
             return context
 
         # 1. 尝试从向量库召回
+        # Phase 14 关键修复：向量库语义检索可能返回相似但不匹配的公司文档
+        # （如查华为返回腾讯文档），导致 company_name 被错误覆盖
+        # 修复：向量库返回的公司名必须与传入的 company_name 一致才使用，
+        # 否则忽略向量库结果，保持传入公司名不变
         if self.vector_store and self.embedder:
             try:
                 query_emb = await self.embedder.embed_query(f"{company_name} 面试 企业文化 业务")
@@ -1030,8 +1034,15 @@ class InterviewAgent:
                 if docs:
                     content = docs[0].get("content", "")
                     meta = docs[0].get("metadata", {})
+                    vector_company_name = meta.get("company_name", "")
+                    # Phase 14 关键校验：向量库返回的公司名必须与传入公司名匹配
+                    # 避免"查华为返回腾讯"的跨公司串扰问题
+                    if vector_company_name and company_name and vector_company_name != company_name:
+                        # 公司名不匹配，不使用向量库结果，直接返回传入公司名的空 context
+                        return context
                     context["has_company"] = True
-                    context["company_name"] = meta.get("company_name", company_name)
+                    # 保持传入的 company_name，不使用向量库可能错误的公司名覆盖
+                    context["company_name"] = company_name
                     context["industry"] = meta.get("industry", "")
                     context["business"] = self._extract_field(content, "description")
                     context["culture"] = self._extract_field(content, "culture")
@@ -1057,19 +1068,26 @@ class InterviewAgent:
                     result = await db.execute(stmt)
                     company = result.scalar_one_or_none()
                     if company:
-                        context["has_company"] = True
-                        context["company_name"] = company.name or company_name
-                        context["industry"] = company.industry or ""
-                        context["business"] = company.description or ""
-                        context["culture"] = company.culture or ""
-                        context["benefits"] = company.benefits or ""
-                        context["interview_process"] = company.interview_process or ""
-                        context["avg_difficulty"] = company.avg_difficulty or ""
-                        context["interview_style"] = self._infer_interview_style(
-                            context["company_name"], str(company.__dict__))
-                        context["hiring_points"] = self._infer_hiring_points(
-                            context["company_name"], str(company.__dict__))
-                        return context
+                        # Phase 14 校验：数据库查询的公司名也必须与传入公司名匹配
+                        db_company_name = company.name or ""
+                        if db_company_name and company_name and db_company_name != company_name:
+                            # 模糊匹配可能返回错误公司，保持传入公司名不变
+                            pass
+                        else:
+                            context["has_company"] = True
+                            # 保持传入的 company_name，不使用数据库公司名覆盖
+                            context["company_name"] = company_name
+                            context["industry"] = company.industry or ""
+                            context["business"] = company.description or ""
+                            context["culture"] = company.culture or ""
+                            context["benefits"] = company.benefits or ""
+                            context["interview_process"] = company.interview_process or ""
+                            context["avg_difficulty"] = company.avg_difficulty or ""
+                            context["interview_style"] = self._infer_interview_style(
+                                context["company_name"], str(company.__dict__))
+                            context["hiring_points"] = self._infer_hiring_points(
+                                context["company_name"], str(company.__dict__))
+                            return context
             except Exception:
                 pass
 
@@ -1459,8 +1477,44 @@ class InterviewAgent:
             or ""
         )
         difficulty = payload.get("difficulty", "middle")
-        company_name = payload.get("company_name", "")
-        company_id = payload.get("company_id", "")
+        # Phase 14 修复：target_company 优先从 session_ctx.user_assets 读取（全链路一致）
+        # 避免依赖 payload 中的 company_name（可能因 planner 未透传而丢失）
+        user_assets = session_ctx.get("user_assets", {}) or {}
+        company_name = (
+            user_assets.get("target_company")
+            or session_ctx.get("target_company")  # 兜底：session_ctx 顶层
+            or payload.get("company_name", "")
+            or ""
+        )
+        company_id = (
+            user_assets.get("target_company_id")
+            or session_ctx.get("target_company_id")  # 兜底：session_ctx 顶层
+            or payload.get("company_id", "")
+            or ""
+        )
+
+        # Phase 14 调试日志：追踪公司信息传递链路
+        import logging
+        _logger = logging.getLogger(__name__)
+        _logger.info(
+            "[ Phase14 调试 _handle_start ] "
+            "session_id=%s | target_position=%s | company_name=%s | company_id=%s | "
+            "user_assets=%s | payload.company_name=%s | payload.company_id=%s | "
+            "session_ctx.target_company=%s | session_ctx keys=%s",
+            payload.get("session_id", ""),
+            target_position,
+            company_name,
+            company_id,
+            json.dumps(user_assets, ensure_ascii=False),
+            payload.get("company_name", ""),
+            payload.get("company_id", ""),
+            session_ctx.get("target_company", ""),
+            list(session_ctx.keys()),
+        )
+
+        # 持久化到 session_ctx 顶层，确保后续阶段可直接读取
+        session_ctx["target_company"] = company_name
+        session_ctx["target_company_id"] = company_id
 
         # 防御：如果会话已处于活跃状态，跳过重复初始化（防止重复出题）
         current_stage = session_ctx.get("current_stage", "init")
@@ -1485,6 +1539,21 @@ class InterviewAgent:
         session_ctx.pop("pending_stage_start", None)  # 清除待启动阶段标记
         session_ctx.pop("total_score", None)
         session_ctx.pop("section_scores", None)
+        # Phase 13：清除追问状态（新一场面试开始时清空）
+        session_ctx.pop("follow_up_state", None)
+        # Phase 14 关键修复：清除上一场面试的对话历史
+        # 根因：复用同一 session_id（基于 interview_id）重新开始面试时，history 中残留旧面试对话
+        # （可能包含其他公司内容），这些旧对话通过 _llm_stream 的 history 参数传入 LLM，
+        # 导致 LLM 被旧公司上下文污染，开场白出现非选定公司信息
+        # 注意：handle_message 已在调用 agent 前 append 了 "开始面试" 的 user 消息，
+        # 此处清空后需重新 append 当前用户输入，保持对话语义完整
+        current_user_input = None
+        if session_ctx.get("history"):
+            # 保留最后一条用户消息（即本次"开始面试"指令）
+            current_user_input = session_ctx["history"][-1]
+        session_ctx["history"] = []
+        if current_user_input:
+            session_ctx["history"].append(current_user_input)
         # 初始化会话级已出题缓存库（新一场面试开始时清空缓存）
         self._init_question_cache(session_ctx)
         # 持久化岗位信息到 session_ctx，后续 _handle_chat 等从 session_ctx 读取
@@ -1493,6 +1562,17 @@ class InterviewAgent:
         # 获取公司上下文（定制化出题）
         company_ctx = await self._fetch_company_context(company_name, company_id)
         position_ctx = self._classify_position(target_position)
+
+        # Phase 14 调试日志：记录 company_ctx 实际值
+        _logger.info(
+            "[ Phase14 调试 _handle_start company_ctx ] "
+            "company_name(传入)=%s | company_ctx.company_name=%s | company_ctx.has_company=%s | "
+            "company_ctx keys=%s",
+            company_name,
+            (company_ctx or {}).get("company_name", ""),
+            (company_ctx or {}).get("has_company", False),
+            list((company_ctx or {}).keys()),
+        )
 
         # 缓存公司上下文到 session_ctx，后续阶段复用
         session_ctx["company_ctx"] = company_ctx
@@ -1504,6 +1584,14 @@ class InterviewAgent:
         prompt = self._build_question_prompt(
             target_position, difficulty, "self_intro", 0, 1,
             is_first=True, company_ctx=company_ctx, position_ctx=position_ctx
+        )
+        # Phase 14 调试日志：记录 prompt 中是否包含公司名
+        _logger.info(
+            "[ Phase14 调试 _build_question_prompt ] "
+            "prompt 包含公司名「%s」: %s | prompt 前200字符: %s",
+            company_name,
+            company_name in prompt if company_name else False,
+            prompt[:200],
         )
         full_text = ""
         async for chunk in self._llm_stream(prompt, payload.get("dialogue_history", [])):
@@ -1705,6 +1793,10 @@ class InterviewAgent:
         # === 正常答题流程 ===
         current_question = self._find_current_question(question_records, current_stage, question_index)
 
+        # 检查是否处于追问模式（上一轮已点评+追问，本轮应推进到下一题）
+        follow_up_state = session_ctx.get("follow_up_state") or {}
+        pending_advance = follow_up_state.get("pending_advance_after_follow_up") is True
+
         # ① 调用1：纯点评生成（结构化JSON输出，强制字段拼接）
         # _generate_review_only 返回 (字段字典, 分数)，字段字典含 advantage/disadvantage/suggestion
         position_ctx = session_ctx.get("position_ctx")
@@ -1715,11 +1807,28 @@ class InterviewAgent:
         )
         # 拼接点评文本（后端固定模板，无任何AI生成话术）
         review = self._assemble_review_text(review_fields)
-        self._record_answer(
-            question_records, current_question, user_input, review, score, skipped=False,
-            stage=current_stage
-        )
-        stage_scores.setdefault(current_stage, []).append(score)
+
+        # Phase 13 修复：追问回答合并到原题记录，不新增记录、不重复计入 stage_scores
+        # 否则 _find_current_question 会因 stage_questions 列表多出一条相同题目而返回重复题
+        if pending_advance:
+            # 本轮是回答追问 → 合并到原题记录（追加 answer + 更新 review/score 取较高值）
+            self._merge_follow_up_answer(
+                question_records, current_stage, current_question,
+                user_input, review, score
+            )
+            # 追问评分不单独计入 stage_scores（避免单题多次评分拉偏均分）
+            # 仅在日志中记录，便于排查
+            logging.getLogger(__name__).info(
+                "追问回答已合并到原题记录 | stage=%s score=%d（不重复计入stage_scores）",
+                current_stage, score
+            )
+        else:
+            # 正常答题 → 新增/更新记录 + 计入 stage_scores
+            self._record_answer(
+                question_records, current_question, user_input, review, score, skipped=False,
+                stage=current_stage
+            )
+            stage_scores.setdefault(current_stage, []).append(score)
 
         # ② 判断状态 → 输出单条内容
         config = QUESTION_BANK_CONFIG.get(current_stage)
@@ -1728,12 +1837,67 @@ class InterviewAgent:
                                   session_finished=False, note="未知阶段")
             return
 
+        # === Phase 13：追问机制 ===
+        # 若当前阶段允许追问，且未追问过该题，则生成追问（不推进 question_index）
+        # 下一轮用户回答追问后，pending_advance=True，直接推进到下一题
+        follow_up_count_in_stage = follow_up_state.get(current_stage, {}).get("count", 0)
+        if (
+            not pending_advance
+            and self._should_ask_follow_up(current_stage, question_index, follow_up_count_in_stage)
+            and user_input.strip() != "跳过"
+        ):
+            follow_up_round = follow_up_count_in_stage + 1
+            follow_up_q = await self._generate_follow_up_only(
+                target_position, current_stage,
+                current_question, user_input,
+                follow_up_round
+            )
+            if follow_up_q:
+                # 记录追问状态
+                follow_up_state[current_stage] = {
+                    "count": follow_up_round,
+                    "last_question_index": question_index,
+                }
+                follow_up_state["pending_advance_after_follow_up"] = True
+                follow_up_state["last_follow_up_question"] = follow_up_q
+                session_ctx["follow_up_state"] = follow_up_state
+
+                # 输出：点评 + 承接语 + 追问问题
+                TRANSITION = "嗯，我们来深入一下这个点。"
+                full_output = f"【点评】\n{review}\n\n{TRANSITION}\n\n{follow_up_q}"
+                full_output = self._dedupe_guide_phrases(full_output)
+                full_output = self._dedupe_transition_phrases(full_output)
+                yield full_output
+                # 追问不推进 question_index，META 仍保持当前题号
+                yield self._meta_json(
+                    current_stage, current_stage, follow_up_q,
+                    session_finished=False,
+                    note=f"追问第{follow_up_round}轮 → {current_stage} 第{question_index+1}/{config['count']}题（追问不推进题号）",
+                    question_index=question_index,
+                    is_follow_up=True,
+                    follow_up_round=follow_up_round,
+                )
+                return
+            else:
+                # 追问生成失败，清空追问状态，正常推进
+                logging.getLogger(__name__).info(
+                    "追问生成失败，正常推进到下一题 | stage=%s q_index=%d",
+                    current_stage, question_index
+                )
+                follow_up_state.pop("pending_advance_after_follow_up", None)
+                session_ctx["follow_up_state"] = follow_up_state
+        else:
+            # 不需要追问，或追问已完成 → 清空追问状态
+            if pending_advance:
+                follow_up_state.pop("pending_advance_after_follow_up", None)
+                session_ctx["follow_up_state"] = follow_up_state
+
         next_q_index = question_index + 1
         if next_q_index < config["count"]:
             # 场景1：阶段内推进 - 双独立调用 + 后端固定拼接
             # 调用1：生成纯点评（强制引用用户回答原文）
             # 调用2：生成纯题干（零引导零话术）
-            # 后端硬编码拼接：【点评】+ 纯点评 + 引导语 + 纯题干
+            # 后端硬编码拼接：【点评】+ 纯点评 + 承接语 + 引导语 + 纯题干
             company_ctx = session_ctx.get("company_ctx")
             position_ctx = session_ctx.get("position_ctx")
 
@@ -1743,10 +1907,15 @@ class InterviewAgent:
                 history, company_ctx=company_ctx, position_ctx=position_ctx,
                 session_ctx=session_ctx
             )
+            # Phase 13：自然承接语 - 根据是否追问过选择不同衔接
+            if pending_advance:
+                TRANSITION_TEXT = "好的，了解了。那我们再看下一个方向。"
+            else:
+                TRANSITION_TEXT = "嗯，我们继续。"
             # 后端硬编码引导语（仅1次）
             GUIDE_TEXT = "请结合你的实际经验回答以下问题。"
-            # 后端固定拼接（场景1模板：点评+引导语+题干）
-            full_output = f"【点评】\n{review}\n\n{GUIDE_TEXT}\n\n{new_q_text}"
+            # 后端固定拼接（场景1模板：点评+承接语+引导语+题干）
+            full_output = f"【点评】\n{review}\n\n{TRANSITION_TEXT}\n\n{GUIDE_TEXT}\n\n{new_q_text}"
             # 全局去重：确保引导语、过渡语在完整输出中仅出现1次
             full_output = self._dedupe_guide_phrases(full_output)
             full_output = self._dedupe_transition_phrases(full_output)
@@ -1801,8 +1970,9 @@ class InterviewAgent:
                     history, company_ctx=company_ctx, position_ctx=position_ctx,
                     session_ctx=session_ctx
                 )
+                TRANSITION_TEXT = "好的，了解了。那我们再看下一个方向。"
                 GUIDE_TEXT = "请结合你的实际经验回答以下问题。"
-                full_output = f"【点评】\n{review}\n\n{GUIDE_TEXT}\n\n{new_q_text}"
+                full_output = f"【点评】\n{review}\n\n{TRANSITION_TEXT}\n\n{GUIDE_TEXT}\n\n{new_q_text}"
                 full_output = self._dedupe_guide_phrases(full_output)
                 full_output = self._dedupe_transition_phrases(full_output)
                 yield full_output
@@ -1974,6 +2144,16 @@ class InterviewAgent:
         stage_scores = session_ctx.get("stage_scores", {})
         history = session_ctx.get("history", [])
         completed_stages = session_ctx.get("completed_stages", [])
+
+        # Phase 13：跳过时清理追问状态（避免跳过追问后状态错乱）
+        follow_up_state = session_ctx.get("follow_up_state") or {}
+        if follow_up_state.get("pending_advance_after_follow_up"):
+            follow_up_state.pop("pending_advance_after_follow_up", None)
+            session_ctx["follow_up_state"] = follow_up_state
+            logging.getLogger(__name__).info(
+                "跳过追问，清理 pending_advance_after_follow_up | stage=%s q_index=%d",
+                current_stage, question_index
+            )
 
         # === 硬上限校验 ===
         total_answered = sum(
@@ -2349,14 +2529,10 @@ class InterviewAgent:
         session_ctx["completed_stages"] = completed_stages
 
         # === 计算最终评分（与 _handle_end 逻辑一致） ===
-        section_scores = {}
-        for stage, scores in stage_scores.items():
-            valid = [s for s in scores if s > 0]
-            section_scores[stage] = round(sum(valid) / len(valid), 1) if valid else 0
-        total = 0.0
-        for stage, weight in STAGE_WEIGHTS.items():
-            total += section_scores.get(stage, 0) * weight
-        total_score = round(total, 1)
+        # Phase 13 修复：基于 question_records 实际作答情况计算
+        section_scores, total_score = self._calc_final_scores(
+            question_records, stage_scores
+        )
         session_ctx["total_score"] = total_score
         session_ctx["section_scores"] = section_scores
 
@@ -2405,17 +2581,11 @@ class InterviewAgent:
         stage_scores = session_ctx.get("stage_scores", {})
         question_records = session_ctx.get("question_records", [])
 
-        # 计算各环节均分
-        section_scores = {}
-        for stage, scores in stage_scores.items():
-            valid = [s for s in scores if s > 0]
-            section_scores[stage] = round(sum(valid) / len(valid), 1) if valid else 0
-
-        # 加权总分
-        total = 0.0
-        for stage, weight in STAGE_WEIGHTS.items():
-            total += section_scores.get(stage, 0) * weight
-        total_score = round(total, 1)
+        # Phase 13 修复：综合评分基于 question_records 实际作答情况计算
+        # 避免追问重复评分、跳过题默认70分等导致的评分失真
+        section_scores, total_score = self._calc_final_scores(
+            question_records, stage_scores
+        )
 
         # 将评分数据写入 session_ctx，供 ReviewAgent 使用
         session_ctx["total_score"] = total_score
@@ -2491,7 +2661,7 @@ class InterviewAgent:
         company_ctx: Optional[dict] = None,
         position_ctx: Optional[dict] = None,
     ) -> str:
-        """构造出题 prompt（支持公司+岗位定制化）"""
+        """构造出题 prompt（支持公司+岗位定制化 + 多形式题库引导 + 自然话术）"""
         config = QUESTION_BANK_CONFIG.get(stage, {})
         q_type = config.get("type", "")
         diff_map = {
@@ -2529,14 +2699,29 @@ class InterviewAgent:
             }
         hint = stage_hints.get(stage, "")
 
+        # Phase 13：多形式题库引导 - 按 q_index 提示不同考察方向
+        question_angle_hint = ""
+        angle_text = self._get_stage_question_angle(stage, q_index, target_position)
+        if angle_text:
+            question_angle_hint = f"""
+【本题目考察方向 - 第{q_index+1}题专属】
+{angle_text}
+
+注意：本题为该阶段第{q_index+1}题，必须围绕上述方向出题，禁止与该阶段其他题目的考察角度重复。
+"""
+
         first_line = "请简短开场问候，然后" if is_first else ""
 
         # 构建公司上下文段落
+        # Phase 14 修复：公司名强绑定，即使数据库未查到详情，也必须透传公司名
+        # 避免 LLM 因 prompt 中无公司信息而自由发挥编造其他公司（如宝洁、阿里巴巴）
         company_context_text = ""
-        if company_ctx and company_ctx.get("has_company"):
+        if company_ctx:
             c = company_ctx
-            company_context_text = f"""
-【目标公司】{c['company_name']}
+            company_name_in_ctx = c.get('company_name', '') or ''
+            if company_name_in_ctx:
+                company_context_text = f"""
+【目标公司】{company_name_in_ctx}
 所属行业：{c.get('industry', '')}
 主营业务：{c.get('business', '')}
 企业文化：{c.get('culture', '')}
@@ -2554,23 +2739,34 @@ class InterviewAgent:
 核心考察点：{position_ctx.get('focus_points', '')}
 """
 
-        # 定制化开场白指令
+        # Phase 14 修复：开场白强绑定公司名
+        # 只要 company_ctx 中有公司名（无论 has_company 是否为 True），就必须在开场白中提及
+        # 避免 has_company=False 时 LLM 编造其他公司名
+        company_name_for_opening = (company_ctx or {}).get('company_name', '') or ''
         opening_instruction = ""
         if is_first:
-            if company_ctx and company_ctx.get("has_company"):
+            if company_name_for_opening:
+                # 确定公司详情是否可用（has_company=True 表示有完整公司信息）
+                has_full_info = bool(company_ctx and company_ctx.get("has_company"))
+                interview_process_ref = company_ctx.get('interview_process', '') if has_full_info else ''
+                interview_style_ref = company_ctx.get('interview_style', '') if has_full_info else ''
                 opening_instruction = f"""开场白必须包含以下要素：
 1. 称呼候选人为「你好」
-2. 明确提及公司名「{company_ctx['company_name']}」
-3. 提及岗位名「{target_position}」
-4. 简要介绍面试流程（参考：{company_ctx.get('interview_process', '1-2轮技术面+HR面')}）
-5. 提及公司面试风格（{company_ctx.get('interview_style', '专业规范')}）
-6. 严禁使用「欢迎参加本次面试」等通用模板句式"""
+2. 【强制】明确提及公司名「{company_name_for_opening}」，这是本场面试的目标公司
+3. 提及岗位名「{target_position or '通用岗位'}」
+4. 简要介绍面试流程（参考：{interview_process_ref or '1-2轮技术面+HR面'}）
+5. 提及公司面试风格（{interview_style_ref or '专业规范'}）
+6. 严禁使用「欢迎参加本次面试」等通用模板句式
+7. 【公司一致性强约束】开场白中只能出现「{company_name_for_opening}」这一家公司，
+   绝对禁止出现其他任何公司名称（如宝洁、阿里巴巴、腾讯、字节跳动等），
+   绝对禁止使用非「{company_name_for_opening}」的业务场景、企业文化、产品作为举例。"""
             elif target_position:
                 opening_instruction = f"""开场白必须包含以下要素：
 1. 称呼候选人为「你好」
 2. 明确提及岗位名「{target_position}」
 3. 简要介绍面试流程
-4. 严禁使用「欢迎参加本次面试」等通用模板句式"""
+4. 严禁使用「欢迎参加本次面试」等通用模板句式
+5. 【公司一致性强约束】严禁在开场白中编造或提及任何具体公司名称。"""
 
         # 定制化出题指令
         custom_question_instruction = ""
@@ -2588,7 +2784,27 @@ class InterviewAgent:
 - 核心考察点：{position_ctx.get('focus_points', '')}
 - 题目必须围绕该岗位的真实工作内容出题，不要出通用题"""
 
-        return f"""你是拥有8年招聘经验的资深面试官，正在面试「{target_position or '通用岗位'}」岗位。
+        # Phase 14 修复：面试官人设强绑定公司名
+        # 原代码仅提岗位不提公司，导致 LLM 自由发挥编造公司
+        interviewer_company_line = ""
+        if company_name_for_opening:
+            interviewer_company_line = f"你是「{company_name_for_opening}」的资深面试官，"
+        else:
+            interviewer_company_line = "你是资深面试官，"
+
+        # Phase 14 修复：公司一致性全局约束
+        company_consistency_constraint = ""
+        if company_name_for_opening:
+            company_consistency_constraint = f"""
+10. 【公司一致性绝对约束 - 违规将被系统强制拦截】
+   本场面试的目标公司是「{company_name_for_opening}」，全链路唯一公司上下文。
+   - 你的身份是「{company_name_for_opening}」的面试官，不是其他公司的面试官
+   - 所有输出内容（开场白、题目、场景设定、业务举例）只能围绕「{company_name_for_opening}」展开
+   - 绝对禁止出现以下公司名称：宝洁、阿里巴巴、腾讯、字节跳动、百度、美团、京东、网易、华为、小米等
+   - 绝对禁止使用非「{company_name_for_opening}」的业务场景、产品、企业文化作为题目背景
+   - 若需举例，只能使用「{company_name_for_opening}」的业务场景；若不了解该公司详情，使用通用业务场景，不要套用其他公司"""
+
+        return f"""你{interviewer_company_line}拥有8年招聘经验，正在面试「{target_position or '通用岗位'}」岗位。
 难度等级: {diff_map.get(difficulty, difficulty)}
 {company_context_text}
 {position_context_text}
@@ -2596,6 +2812,7 @@ class InterviewAgent:
 任务：{first_line}{hint}
 {opening_instruction}
 {custom_question_instruction}
+{question_angle_hint}
 
 规则:
 1. 每次只问一个问题
@@ -2604,7 +2821,13 @@ class InterviewAgent:
 4. 不评价对错、不给答案、不教学
 5. 不加'面试官：'前缀
 6. 不同公司、不同岗位的开场白和题目应有明显差异，禁止使用通用模板
-7. 【权限边界强约束 - 违规内容将被系统强制删除】
+7. 【题目多样性强约束】同一阶段内不同题号必须考察不同维度/不同方向，禁止出同质化题目。
+   例如 project_qa 阶段禁止连续两题都问"最有代表性的项目"；应分别考察：从0到1主导、失败项目反思、跨部门协作等不同方向。
+8. 【自然语言风格】题目语言要口语化、自然流畅，像真实面试官现场发问。
+   - 允许使用"嗯""好的""那我们""接下来"等自然衔接词
+   - 禁止生硬的题库式表达（如"请详细描述..."过于书面化）
+   - 示例：✅ "那我们来聊聊你的项目经历，分享一个你主导从0到1落地的项目吧，重点讲讲你的设计思路和推动过程"
+9. 【权限边界强约束 - 违规内容将被系统强制删除】
    你（大模型）仅允许生成「单道题目的题干内容」，绝对禁止生成任何流程类话术。
    以下内容均由后端状态机唯一管控，LLM 严禁越权生成：
    - 全局结束话术：「面试全部结束」「面试到此结束」「整场面试结束」「今天面试就到这里」「感谢你的时间与分享」「后续结果会通知你」等
@@ -2615,6 +2838,7 @@ class InterviewAgent:
    阶段切换、全局结束、回答点评、题量计数均由后端状态机自动判定，与 LLM 无关。
    你只需输出第{q_index+1}题的题干，不要输出任何其他内容。
    违规输出的话术将被系统静默删除，可能导致题目内容不完整，请严格遵守。
+{company_consistency_constraint}
 
 请直接输出面试官话术（仅题干，无任何前缀和流程话术）。"""
 
@@ -3385,33 +3609,251 @@ JD摘要：{jd_summary[:300]}
         # 所有重试失败 → 返回阶段具体兜底题干（必须是真实题目，禁止引导语）
         # Phase 12 修复：原兜底「请结合你的实际经验回答以下问题。」是引导语不是题干，
         # 导致用户看到只有话术没有题干的问题。改为按阶段返回具体真实题目。
+        # Phase 14 修复：兜底题目按 q_index 选择多样化题目，避免重复出相同兜底题
         logging.getLogger(__name__).error(
-            "纯题干生成全部失败，返回阶段具体兜底题干 | 最后错误: %s | 阶段: %s",
-            last_error, stage
+            "纯题干生成全部失败，返回阶段具体兜底题干 | 最后错误: %s | 阶段: %s | q_index: %s",
+            last_error, stage, q_index
         )
-        fallback_q = self._get_stage_fallback_question(stage, target_position)
+        fallback_q = self._get_stage_fallback_question(
+            stage, target_position, q_index, session_ctx
+        )
         self._record_asked_question(fallback_q, None, stage, session_ctx)
         return fallback_q
 
     @staticmethod
-    def _get_stage_fallback_question(stage: str, target_position: str) -> str:
+    def _get_stage_fallback_question(
+        stage: str, target_position: str,
+        q_index: int = 0, session_ctx: Optional[dict] = None,
+    ) -> str:
         """按阶段返回具体兜底题干（真实题目，非引导语）
 
         当 LLM 题干生成全部失败时使用，确保用户始终能看到一道真实题目而非引导语。
+        Phase 14 修复：按 q_index 选择多样化兜底题目，避免同阶段重复出相同兜底题。
 
         :param stage: 面试阶段
         :param target_position: 目标岗位
+        :param q_index: 阶段内题号（0-based），用于选择多样化题目
+        :param session_ctx: 会话上下文（用于检查已出题目，避免重复）
         :return: 阶段相关的具体兜底题目
         """
         pos = target_position or "目标岗位"
-        fallback_map = {
-            "self_intro": f"请简单介绍一下你自己，重点说明你与{pos}岗位相关的经历和能力。",
-            "tech_qa": f"请详细说明你在{pos}岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？",
-            "star_qa": f"请描述一次你在工作中遇到的最大挑战，使用STAR法则说明情境、任务、行动和结果。",
-            "project_qa": f"请详细描述你经历过的最有代表性的一个项目，说明你在其中的角色、承担的职责、解决的关键问题以及最终的量化成果。",
-            "reverse_qa": "你有什么问题想了解关于这个岗位或公司的吗？",
-        }
-        return fallback_map.get(stage, f"请结合你的{pos}岗位经验，详细说明一个你印象最深的工作经历。")
+
+        # Phase 14：优先使用多样化题库（按 q_index 选择不同考察角度）
+        angles = InterviewAgent._STAGE_QUESTION_ANGLES.get(stage, [])
+        if angles and q_index < len(angles):
+            candidate_q = angles[q_index].format(pos=pos)
+        else:
+            # q_index 超出范围或无多样化题库，使用固定兜底
+            fallback_map = {
+                "self_intro": f"请简单介绍一下你自己，重点说明你与{pos}岗位相关的经历和能力。",
+                "tech_qa": f"请详细说明你在{pos}岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？",
+                "star_qa": f"请描述一次你在工作中遇到的最大挑战，使用STAR法则说明情境、任务、行动和结果。",
+                "project_qa": f"请详细描述你经历过的最有代表性的一个项目，说明你在其中的角色、承担的职责、解决的关键问题以及最终的量化成果。",
+                "reverse_qa": "你有什么问题想了解关于这个岗位或公司的吗？",
+            }
+            candidate_q = fallback_map.get(stage, f"请结合你的{pos}岗位经验，详细说明一个你印象最深的工作经历。")
+
+        # Phase 14 关键修复：检查兜底题目是否已出过，若已出过则选下一道未出过的
+        if session_ctx:
+            cache = session_ctx.get("question_cache", {}) or {}
+            asked_questions = cache.get("asked_questions", [])
+            asked_texts = [item.get("question", "") for item in asked_questions]
+
+            # 如果当前候选题已出过，尝试从多样化题库中找未出过的
+            if candidate_q in asked_texts and angles:
+                for angle in angles:
+                    alt_q = angle.format(pos=pos)
+                    if alt_q not in asked_texts:
+                        return alt_q
+
+            # 如果所有多样化题目都已出过或没有多样化题库，尝试固定兜底题目中未出过的
+            all_fallbacks = {
+                "self_intro": [
+                    f"请简单介绍一下你自己，重点说明你与{pos}岗位相关的经历和能力。",
+                    f"请做一个自我介绍，突出你匹配{pos}岗位的核心优势。",
+                ],
+                "tech_qa": [
+                    f"请详细说明你在{pos}岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？",
+                    f"在{pos}领域，你认为最重要的技术趋势是什么？请结合你的实际经验说明。",
+                    f"请描述你在{pos}工作中遇到的一个技术难题，以及你的解决过程。",
+                ],
+                "star_qa": [
+                    f"请描述一次你在工作中遇到的最大挑战，使用STAR法则说明情境、任务、行动和结果。",
+                    f"分享一次你在团队中发挥关键作用的经历，用STAR法则说明。",
+                    f"描述一次你主动承担额外职责的经历，用STAR法则说明情境和成果。",
+                ],
+                "project_qa": [
+                    f"请详细描述你经历过的最有代表性的一个项目，说明你在其中的角色、承担的职责、解决的关键问题以及最终的量化成果。",
+                    f"描述一个你主导的从0到1落地的项目，重点讲讲你的方案设计思路和推动落地的关键动作。",
+                    f"讲一个你推动跨部门协作落地的案例，重点描述你如何对齐不同方诉求并最终达成目标。",
+                ],
+                "reverse_qa": [
+                    "你有什么问题想了解关于这个岗位或公司的吗？",
+                    "关于这个岗位的日常工作或团队协作，你有什么想了解的？",
+                ],
+            }
+            stage_fallbacks = all_fallbacks.get(stage, [candidate_q])
+            for fb in stage_fallbacks:
+                if fb not in asked_texts:
+                    return fb
+            # 全部都出过了，返回最后一个（极端情况）
+            return stage_fallbacks[-1]
+
+        return candidate_q
+
+    # ============================================================
+    # Phase 13：多形式题库 - 为 project_qa / star_qa / tech_qa 提供多样化题干方向
+    # 每个阶段按 q_index 选择不同考察角度，避免"最有代表性的项目"类同质化题目
+    # ============================================================
+    _STAGE_QUESTION_ANGLES = {
+        "project_qa": [
+            # 第1题：从0到1的项目主导
+            "描述一个你主导的从0到1落地的项目，重点讲讲你的方案设计思路和推动落地的关键动作。",
+            # 第2题：失败项目反思
+            "分享一个你参与过的最失败的项目，重点说明失败原因、你的反思和后续改进。",
+            # 第3题：跨部门协作
+            "讲一个你推动跨部门协作落地的案例，重点描述你如何对齐不同方诉求并最终达成目标。",
+        ],
+        "star_qa": [
+            # 第1题：压力/挑战场景
+            "分享一次你在紧迫时间或资源紧张情况下完成目标的经历，用STAR法则说明。",
+            # 第2题：冲突/分歧处理
+            "描述一次你在工作中与同事/上级产生分歧的经历，你是如何处理并推动问题解决的？",
+        ],
+        "tech_qa": [
+            # 第1题：基础概念
+            "你如何理解{pos}岗位中最核心的一项技术原理？请结合实际应用场景说明。",
+            # 第2题：方案设计
+            "给定一个典型业务场景，你会如何设计技术方案？请说明关键决策点和权衡依据。",
+            # 第3题：性能/优化
+            "请描述你做过的最具挑战性的一次性能优化或技术重构，包括定位问题的过程和最终效果。",
+        ],
+    }
+
+    @staticmethod
+    def _get_stage_question_angle(stage: str, q_index: int, target_position: str) -> str:
+        """获取阶段内指定题号对应的多形式考察方向（用于 prompt 引导 LLM 出不同题）
+
+        :param stage: 面试阶段
+        :param q_index: 阶段内题号（0-based）
+        :param target_position: 目标岗位
+        :return: 考察方向描述；无对应返回空字符串
+        """
+        angles = InterviewAgent._STAGE_QUESTION_ANGLES.get(stage, [])
+        if not angles or q_index >= len(angles):
+            return ""
+        pos = target_position or "目标岗位"
+        return angles[q_index].format(pos=pos)
+
+    # ============================================================
+    # Phase 13：追问机制 - 候选人回答后基于回答内容生成1-2个追问
+    # 追问不推进 question_index，下一轮才正式推进到新题
+    # ============================================================
+    def _build_follow_up_prompt(
+        self, target_position: str, stage: str,
+        question: str, user_answer: str,
+        follow_up_round: int,
+    ) -> str:
+        """构造追问 prompt（基于候选人回答生成1个追问问题）"""
+        return f"""你是拥有8年招聘经验的资深面试官，正在面试「{target_position or '通用岗位'}」岗位。
+当前环节：{QUESTION_BANK_CONFIG.get(stage, {}).get('type', stage)}
+面试官问题：{question}
+候选人回答原文：
+---
+{user_answer}
+---
+
+任务：基于候选人的回答，生成1个追问问题，深挖候选人回答中的细节、数据、决策依据或潜在疑点。
+
+【追问生成规则 - 违反则追问无效】
+1. 仅输出1个追问问题，无任何前缀、无点评、无承接话术、无引导语。
+2. 追问必须紧扣候选人回答中的具体内容（如候选人提到的方案/数据/决策/挑战）。
+3. 优先深挖以下维度之一（按优先级）：
+   - 若回答笼统：追问具体数据、具体动作、具体决策依据
+   - 若回答有亮点：追问"当时为什么选择这个方案而不是其他？"
+   - 若回答有疑点：追问"这里遇到的最大挑战是什么？你怎么解决的？"
+4. 追问语言要自然口语化，像真实面试官的现场追问。
+5. 追问禁止与原题重复，禁止简单复述原题。
+6. 追问禁止包含"环节结束"、"接下来进入"、"面试结束"等流程话术。
+7. 追问禁止包含"优点"、"不足"、"点评"、"评分"等评估性词汇。
+8. 当前是第{follow_up_round}轮追问（最多2轮），追问应当比上一轮更具体、更深入。
+
+【强制输出JSON结构】
+{{
+  "follow_up_question": "纯追问问题文本，无任何前缀和流程话术"
+}}
+
+直接输出JSON，不要代码块标记、不要解释："""
+
+    def _parse_follow_up_json(self, result: str) -> Optional[str]:
+        """解析追问 JSON，返回 follow_up_question 字段值"""
+        if not result:
+            return None
+        text = result.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1] if "\n" in text else text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            text = text.strip()
+        import re as _re
+        match = _re.search(r'\{[\s\S]*\}', text)
+        if not match:
+            return None
+        try:
+            data = json.loads(match.group(0))
+        except (json.JSONDecodeError, ValueError):
+            return None
+        if not isinstance(data, dict):
+            return None
+        follow_up = (data.get("follow_up_question") or "").strip()
+        if not follow_up:
+            return None
+        # 清洗：移除可能残留的流程话术
+        for pat in STAGE_TRANSITION_PATTERNS:
+            if pat in follow_up:
+                return None
+        for pat in REVIEW_PATTERNS:
+            if pat in follow_up:
+                return None
+        return follow_up
+
+    async def _generate_follow_up_only(
+        self, target_position: str, stage: str,
+        question: str, user_answer: str,
+        follow_up_round: int,
+    ) -> Optional[str]:
+        """生成单个追问问题（失败返回 None）"""
+        if not user_answer or len(user_answer.strip()) < 5:
+            return None
+        prompt = self._build_follow_up_prompt(
+            target_position, stage, question, user_answer, follow_up_round
+        )
+        try:
+            full_text = ""
+            async for chunk in self._llm_stream(prompt, []):
+                full_text += chunk
+            follow_up = self._parse_follow_up_json(full_text)
+            if not follow_up or len(follow_up.strip()) < 5:
+                return None
+            return follow_up.strip()
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"追问生成失败: {e}")
+            return None
+
+    def _should_ask_follow_up(
+        self, stage: str, question_index: int,
+        follow_up_count_in_stage: int,
+    ) -> bool:
+        """判断当前是否需要追问
+
+        策略：
+        - self_intro / reverse_qa 阶段不追问（开场和反问环节不深挖）
+        - 其他阶段：每道正式题目最多追问1次（避免拖慢节奏）
+        - 已追问1次则不再追问，下一轮直接推进到新题
+        """
+        if stage in ("self_intro", "reverse_qa", "init", "end"):
+            return False
+        return follow_up_count_in_stage < 1
 
     @staticmethod
     def _parse_question_json(result: str) -> Optional[str]:
@@ -3595,6 +4037,126 @@ JD摘要：{jd_summary[:300]}
             "score": score,
             "skipped": skipped,
         })
+
+    def _merge_follow_up_answer(
+        self, records: list, stage: str, question: str,
+        follow_up_answer: str, follow_up_review: str, follow_up_score: int,
+    ):
+        """追问回答合并到原题记录（不新增记录，避免 _find_current_question 返回重复题）
+
+        合并策略：
+        1. 找到 stage + question 对应的原题记录
+        2. 将追问回答追加到 answer 字段（用分隔符标注「追问回答」）
+        3. review 字段追加追问点评
+        4. score 取原题分与追问分的较高值（追问是对原题的深挖，取较高分更合理）
+        """
+        for rec in reversed(records):
+            if (rec.get("stage") == stage
+                    and rec.get("question") == question):
+                # 追加追问回答（不覆盖原回答）
+                orig_answer = rec.get("answer", "")
+                rec["answer"] = (
+                    f"{orig_answer}\n\n[追问回答] {follow_up_answer}"
+                    if orig_answer else f"[追问回答] {follow_up_answer}"
+                )
+                # 追加追问点评
+                orig_review = rec.get("review", "")
+                rec["review"] = (
+                    f"{orig_review}\n\n[追问点评] {follow_up_review}"
+                    if orig_review else f"[追问点评] {follow_up_review}"
+                )
+                # 评分取较高值（追问深挖表现好则提升原题分）
+                orig_score = rec.get("score", 0)
+                rec["score"] = max(orig_score, follow_up_score)
+                # 标记已追问
+                rec["has_follow_up"] = True
+                rec["follow_up_score"] = follow_up_score
+                return
+        # 未找到原题记录（异常情况）→ 新增一条记录
+        logging.getLogger(__name__).warning(
+            "追问合并未找到原题记录 | stage=%s question=%s → 新增记录",
+            stage, question[:50]
+        )
+        records.append({
+            "stage": stage,
+            "question": question,
+            "answer": f"[追问回答] {follow_up_answer}",
+            "review": f"[追问点评] {follow_up_review}",
+            "score": follow_up_score,
+            "skipped": False,
+            "has_follow_up": True,
+        })
+
+    @staticmethod
+    def _calc_final_scores(
+        question_records: list, stage_scores: dict
+    ) -> tuple:
+        """基于 question_records 实际作答情况计算各环节评分与综合总分
+
+        Phase 13 修复：解决综合评分无法有效计算的问题
+        - 旧逻辑：直接对 stage_scores 取均分，存在追问重复评分、跳过题默认70分等失真问题
+        - 新逻辑：以 question_records 为准，按 stage 分组计算实际作答题目的均分
+
+        评分规则：
+        1. 跳过/未作答的题目：计 0 分（反映实际未作答情况，不默认给 70 分）
+        2. 正常作答的题目：取 question_records 中的 score（已合并追问评分取较高值）
+        3. 阶段均分 = 该阶段所有题目的评分之和 / 该阶段应有的题目数（QUESTION_BANK_CONFIG.count）
+           - 分母用「应有题数」而非「实际作答题数」，跳过题拉低均分更合理
+        4. 综合总分 = Σ(阶段均分 × 阶段权重)
+        5. 若整场面试无任何作答记录，总分返回 0
+
+        :return: (section_scores dict, total_score float)
+        """
+        # 按 stage 分组收集 question_records 中的评分
+        stage_actual_scores = {}  # {stage: [score1, score2, ...]}
+        for rec in question_records:
+            stage = rec.get("stage", "")
+            if not stage or stage in ("init", "end"):
+                continue
+            skipped = rec.get("skipped", False)
+            answer = rec.get("answer", "").strip()
+            # 跳过或未作答的题目计 0 分
+            if skipped or not answer:
+                stage_actual_scores.setdefault(stage, []).append(0)
+            else:
+                score = rec.get("score", 0)
+                # 评分范围校验：0-100
+                try:
+                    score = max(0, min(100, int(score)))
+                except (TypeError, ValueError):
+                    score = 0
+                stage_actual_scores.setdefault(stage, []).append(score)
+
+        # 计算各阶段均分（分母用 QUESTION_BANK_CONFIG 中的应有题数）
+        section_scores = {}
+        for stage, weight in STAGE_WEIGHTS.items():
+            expected_count = QUESTION_BANK_CONFIG.get(stage, {}).get("count", 1)
+            actual_scores = stage_actual_scores.get(stage, [])
+            if not actual_scores:
+                # 该阶段无任何记录 → 0 分
+                section_scores[stage] = 0
+                continue
+            # 分母用 expected_count（跳过题拉低均分）
+            # 但若实际题数 > expected_count（异常情况），用实际题数
+            denom = max(expected_count, len(actual_scores))
+            # 分子：所有题目评分之和（跳过题为0）
+            total = sum(actual_scores)
+            section_scores[stage] = round(total / denom, 1)
+
+        # 加权总分
+        total = 0.0
+        for stage, weight in STAGE_WEIGHTS.items():
+            total += section_scores.get(stage, 0) * weight
+        total_score = round(total, 1)
+
+        # 日志记录评分明细，便于排查
+        logging.getLogger(__name__).info(
+            "综合评分计算完成 | section_scores=%s | total_score=%.1f | stage_actual=%s",
+            section_scores, total_score,
+            {k: v for k, v in stage_actual_scores.items()}
+        )
+
+        return section_scores, total_score
 
     @staticmethod
     def _get_next_stage(current: str) -> str:

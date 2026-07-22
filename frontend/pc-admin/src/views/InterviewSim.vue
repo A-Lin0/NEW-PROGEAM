@@ -436,9 +436,20 @@ async function startInterview() {
   questionIndex.value = 0
   totalQuestions.value = 10  // 全局总题数，与后端 TOTAL_QUESTIONS 一致
 
+  // 通过选中公司 ID 查找公司名称，作为目标公司字符串一并提交给后端持久化
+  // 后端 InterviewStart schema 支持 company_name 字段，存入 interviews.target_company_name
+  let targetCompanyName = ''
+  if (selectedCompany.value) {
+    const matched = companies.value.find((c) => c.id === selectedCompany.value)
+    if (matched && matched.name) {
+      targetCompanyName = matched.name
+    }
+  }
+
   try {
     const { data } = await interviewApi.start({
       position: position.value,
+      company_name: targetCompanyName || undefined,
     })
     interviewId.value = data.id
     // 持久化到 localStorage，防止页面切换后丢失进度

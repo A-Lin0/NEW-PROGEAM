@@ -8,11 +8,37 @@
 - 输出结构化 JSON 报告，供前端复盘页展示
 
 触发方式：API 显式调用（POST /api/review/{id}/generate）或 auto_route 自动联动
+
+Phase 14 修复：重新生成时执行评分全量重算
+- LLM 重新评估每道题的得分（question_by_question[].score）
+- 基于重评估的单题得分，重算各阶段得分（section_scores）和综合总分（total_score）
+- 全量覆盖原有评分数据，确保重新生成后评分与点评均发生更新
 """
 
 import json
+import logging
 import os
 from typing import Optional, Any
+
+
+# 各环节权重（加权计算总分，总和=1.0）
+# 与 interview_agent.STAGE_WEIGHTS 保持一致，避免跨模块依赖
+STAGE_WEIGHTS = {
+    "self_intro":  0.10,
+    "tech_qa":     0.30,
+    "star_qa":     0.20,
+    "project_qa":  0.25,
+    "reverse_qa":  0.15,
+}
+
+# 各阶段应有题数（与 interview_agent.QUESTION_BANK_CONFIG 保持一致）
+QUESTION_BANK_CONFIG = {
+    "self_intro":  1,
+    "tech_qa":     3,
+    "star_qa":     2,
+    "project_qa":  3,
+    "reverse_qa":  1,
+}
 
 
 class ReviewAgent:
@@ -108,11 +134,11 @@ class ReviewAgent:
             yield "[DONE]"
             return
 
-        # ---- 构造复盘 prompt（含已计算评分数据）----
+        # ---- 构造复盘 prompt（让 LLM 重新评估每道题得分，实现评分全量重算）----
         transcript_text = self._format_transcript(transcript)
         prompt = self._build_review_prompt(
             transcript_text, target_position, interview_type, difficulty,
-            total_score, section_scores, question_records
+            question_records
         )
 
         try:
@@ -135,12 +161,36 @@ class ReviewAgent:
                     "overall_comment": content,
                 }
 
-            # 合并：评分数据来自面试Agent，分析数据来自LLM
+            # Phase 14：评分全量重算
+            # 基于 LLM 重新评估的单题得分，更新 question_records 并重算 section_scores/total_score
+            llm_qa_list = llm_result.get("question_by_question", [])
+            recalculated_records = self._merge_llm_scores_to_records(
+                question_records, llm_qa_list
+            )
+            recalculated_section_scores, recalculated_total_score = (
+                self._recalculate_scores(recalculated_records)
+            )
+
+            # 优先使用重算结果；若重算失败（如 LLM 未返回 score），回退到原评分
+            final_section_scores = (
+                recalculated_section_scores if recalculated_total_score > 0 else section_scores
+            )
+            final_total_score = (
+                recalculated_total_score if recalculated_total_score > 0 else total_score
+            )
+
+            logging.getLogger(__name__).info(
+                "复盘评分重算完成 | 原总分=%.1f → 重算总分=%.1f | 原阶段=%s → 重算阶段=%s",
+                total_score, final_total_score,
+                section_scores, final_section_scores,
+            )
+
+            # 合并：评分数据来自重算结果，分析数据来自LLM
             report = {
-                "total_score": total_score,
-                "section_scores": section_scores,
-                "stage_analysis": self._build_stage_analysis(section_scores, question_records),
-                "question_by_question": llm_result.get("question_by_question", []),
+                "total_score": final_total_score,
+                "section_scores": final_section_scores,
+                "stage_analysis": self._build_stage_analysis(final_section_scores, recalculated_records),
+                "question_by_question": llm_qa_list,
                 "overall_problems": llm_result.get("overall_problems", []),
                 "improvement_plan": llm_result.get("improvement_plan", {
                     "short_term": [], "long_term": [], "practice_suggestions": []
@@ -197,6 +247,92 @@ class ReviewAgent:
         return result
 
     @staticmethod
+    def _merge_llm_scores_to_records(
+        question_records: list, llm_qa_list: list,
+    ) -> list:
+        """将 LLM 重新评估的单题得分合并回 question_records
+
+        Phase 14 评分全量重算核心步骤：
+        - 基于 LLM 返回的 question_by_question[].score 更新 question_records[].score
+        - 匹配规则：按索引顺序一一对应（LLM 应按 question_records 顺序输出）
+        - 若 LLM 未返回 score 或格式异常，保留原 score
+
+        :param question_records: 面试Agent记录的原始问答数据
+        :param llm_qa_list: LLM 重新评估的逐题分析（含 score 字段）
+        :return: 合并 LLM 评分后的 question_records 副本
+        """
+        if not llm_qa_list:
+            return list(question_records)
+
+        merged_records = []
+        for idx, rec in enumerate(question_records):
+            new_rec = dict(rec)  # 浅拷贝，避免修改原数据
+            if idx < len(llm_qa_list):
+                llm_score = llm_qa_list[idx].get("score")
+                if llm_score is not None:
+                    try:
+                        # 评分范围校验：0-100
+                        score_val = max(0, min(100, int(llm_score)))
+                        new_rec["score"] = score_val
+                    except (TypeError, ValueError):
+                        pass  # 保留原 score
+            merged_records.append(new_rec)
+        return merged_records
+
+    @staticmethod
+    def _recalculate_scores(question_records: list) -> tuple:
+        """基于 question_records 重新计算各环节评分与综合总分
+
+        Phase 14 评分全量重算：
+        - 逻辑与 interview_agent._calc_final_scores 保持一致
+        - 按 stage 分组计算实际作答题目的均分
+        - 跳过/未作答的题目计 0 分
+        - 阶段均分 = 该阶段所有题目评分之和 / 该阶段应有题数
+        - 综合总分 = Σ(阶段均分 × 阶段权重)
+
+        :return: (section_scores dict, total_score float)
+        """
+        # 按 stage 分组收集评分
+        stage_actual_scores = {}
+        for rec in question_records:
+            stage = rec.get("stage", "")
+            if not stage or stage in ("init", "end"):
+                continue
+            skipped = rec.get("skipped", False)
+            answer = (rec.get("answer", "") or "").strip()
+            # 跳过或未作答的题目计 0 分
+            if skipped or not answer:
+                stage_actual_scores.setdefault(stage, []).append(0)
+            else:
+                score = rec.get("score", 0)
+                try:
+                    score = max(0, min(100, int(score)))
+                except (TypeError, ValueError):
+                    score = 0
+                stage_actual_scores.setdefault(stage, []).append(score)
+
+        # 计算各阶段均分（分母用 QUESTION_BANK_CONFIG 中的应有题数）
+        section_scores = {}
+        for stage, weight in STAGE_WEIGHTS.items():
+            expected_count = QUESTION_BANK_CONFIG.get(stage, 1)
+            actual_scores = stage_actual_scores.get(stage, [])
+            if not actual_scores:
+                section_scores[stage] = 0
+                continue
+            # 分母用 expected_count（跳过题拉低均分）
+            denom = max(expected_count, len(actual_scores))
+            total = sum(actual_scores)
+            section_scores[stage] = round(total / denom, 1)
+
+        # 加权总分
+        total = 0.0
+        for stage, weight in STAGE_WEIGHTS.items():
+            total += section_scores.get(stage, 0) * weight
+        total_score = round(total, 1)
+
+        return section_scores, total_score
+
+    @staticmethod
     def _build_stage_analysis(section_scores: dict, question_records: list) -> list:
         """从评分数据构造阶段分析"""
         stage_labels = {
@@ -223,23 +359,24 @@ class ReviewAgent:
     def _build_review_prompt(
         transcript: str, target_position: str,
         interview_type: str, difficulty: str,
-        total_score: float, section_scores: dict,
         question_records: list,
     ) -> str:
-        """构造复盘 prompt，包含面试Agent已计算的评分数据"""
+        """构造复盘 prompt，让 LLM 重新评估每道题得分并生成专业分析
+
+        Phase 14 修复：评分全量重算
+        - 不再传入面试Agent已计算的评分数据，避免 LLM 直接复用
+        - 要求 LLM 基于答题内容独立评估每道题的得分（0-100）
+        - 后续基于 LLM 评估的单题得分重算 section_scores 和 total_score
+        """
         # 整理问答记录
         qa_lines = []
         for i, rec in enumerate(question_records, 1):
             stage = rec.get("stage", "")
             q = rec.get("question", "")[:150]
             a = rec.get("answer", "")[:150]
-            score = rec.get("score", 0)
             skipped = rec.get("skipped", False)
-            status = "跳过" if skipped else f"得分{score}"
+            status = "跳过" if skipped else "待评估"
             qa_lines.append(f"{i}. [{stage}] Q: {q} | A: {a} | {status}")
-
-        # 阶段得分
-        stage_info = json.dumps(section_scores, ensure_ascii=False)
 
         return f"""你是拥有10年一线招聘经验的资深面试复盘专家。请基于以下面试数据进行专业分析与建议。
 
@@ -248,10 +385,6 @@ class ReviewAgent:
 - 面试类型: {interview_type}
 - 难度等级: {difficulty}
 
-## 评分数据（由面试系统自动计算，请直接使用）
-- 综合总分: {total_score}/100
-- 各阶段得分: {stage_info}
-
 ## 问答记录
 {chr(10).join(qa_lines)}
 
@@ -259,17 +392,24 @@ class ReviewAgent:
 {transcript}
 
 ## 任务
-请基于以上数据，输出以下内容（严格JSON格式，不要输出其他文字）:
+请基于以上数据，独立评估每道题的得分（0-100分），并输出以下内容（严格JSON格式，不要输出其他文字）:
+
+评分标准：
+- 90-100：回答精准、逻辑清晰、有深度、贴合岗位要求
+- 75-89：回答完整、基本正确、有一定深度
+- 60-74：回答基本可用，但存在明显不足或深度不够
+- 40-59：回答有重大缺陷或偏离问题
+- 0-39：未作答、跳过或回答完全错误
 
 {{
   "question_by_question": [
     {{
-      "stage": "阶段标识",
+      "stage": "阶段标识（self_intro/tech_qa/star_qa/project_qa/reverse_qa）",
       "question": "面试官原题（截取关键部分）",
       "answer": "候选人回答摘要",
-      "score": 得分,
-      "advantages": ["优点1"],
-      "shortcomings": ["不足1"],
+      "score": 0-100的整数得分（跳过的题目给0分）,
+      "advantages": ["优点1", "优点2"],
+      "shortcomings": ["不足1", "不足2"],
       "optimization": "具体优化建议（50字以内）"
     }}
   ],
@@ -279,5 +419,5 @@ class ReviewAgent:
     "long_term": ["1-3个月长期提升点1"],
     "practice_suggestions": ["具体练习建议1"]
   }},
-  "overall_comment": "200字以内整体评价，包含总分、亮点、主要短板、核心建议"
+  "overall_comment": "200字以内整体评价，包含核心亮点、主要短板、核心建议"
 }}"""

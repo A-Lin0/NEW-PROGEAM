@@ -17,6 +17,9 @@ class Interview(Base):
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(GUID, ForeignKey("users.id"), nullable=False)
     company_id = Column(GUID, ForeignKey("companies.id"), nullable=True)
+    # 用户在前端选择的目标公司名称（字符串持久化，避免依赖 companies 表关联丢失）
+    # 优先级：target_company_name > company_id 关联查询 > "未指定公司"
+    target_company_name = Column(String(200), nullable=True)
 
     position = Column(String(200))       # 面试岗位
     status = Column(String(20), default="in_progress")  # in_progress | completed | cancelled

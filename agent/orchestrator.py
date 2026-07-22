@@ -292,6 +292,20 @@ class AgentOrchestrator:
         # 结束状态锁：持久化到 Redis，刷新页面后状态保持一致
         session_ctx["ended"] = bool(session_ctx.get("ended", False))
 
+        # Phase 14 调试日志：记录 handle_message 加载的 session_ctx
+        import logging as _logging
+        _logging.getLogger(__name__).info(
+            "[ Phase14 调试 handle_message ] "
+            "session_id=%s | intent=%s | message=%s | "
+            "user_assets=%s | session_status=%s | current_stage=%s | "
+            "session_ctx keys=%s",
+            session_id, intent, message,
+            json.dumps(session_ctx.get("user_assets", {}), ensure_ascii=False),
+            session_ctx.get("session_status"),
+            session_ctx.get("current_stage"),
+            list(session_ctx.keys()),
+        )
+
         # 识别面试命令
         command = "chat"
         if intent == "interview":

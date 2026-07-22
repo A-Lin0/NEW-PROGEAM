@@ -47,14 +47,58 @@ async def start_interview(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """创建面试会话"""
+    """创建面试会话
+
+    Phase 14 修复：目标公司参数拦截
+    - 若 target_company（company_name）和 company_id 均为空，直接拦截面试启动
+    - 返回 400 提示「请选择有效的目标公司后再发起面试」
+    - 若仅 company_name 为空但 company_id 存在，尝试通过 company_id 查询公司名补全
+    """
+    # 目标公司参数拦截校验
+    company_name = (data.company_name or "").strip()
+    if not company_name and not data.company_id:
+        raise HTTPException(
+            status_code=400,
+            detail="请选择有效的目标公司后再发起面试",
+        )
+
+    # 若仅 company_name 为空但 company_id 存在，尝试查询补全
+    if not company_name and data.company_id:
+        try:
+            from ..models.company import Company
+            from sqlalchemy import select
+            company_result = await db.execute(
+                select(Company.name).where(Company.id == data.company_id)
+            )
+            queried_name = company_result.scalar_one_or_none()
+            if queried_name:
+                company_name = queried_name
+            else:
+                # company_id 无效（数据库中不存在对应公司）
+                raise HTTPException(
+                    status_code=400,
+                    detail="请选择有效的目标公司后再发起面试",
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"查询公司名失败 company_id={data.company_id}: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail="请选择有效的目标公司后再发起面试",
+            )
+
     service = InterviewService(db)
     interview = await service.create(
         user_id=current_user.id,
         company_id=data.company_id,
         position=data.position or "",
+        company_name=company_name,
     )
-    logger.info(f"用户 {current_user.username} 开始面试: {interview.id}")
+    logger.info(
+        f"用户 {current_user.username} 开始面试: {interview.id} "
+        f"company_name={company_name}"
+    )
     return interview
 
 
@@ -104,32 +148,42 @@ async def interview_chat(
     user_config = {
         "target_position": interview.position or "",
     }
+    # 优先使用 target_company_name（用户在前端直接选择的字符串）
+    if interview.target_company_name:
+        user_config["target_company"] = interview.target_company_name
     if interview.company_id:
         user_config["target_company_id"] = str(interview.company_id)
-        try:
-            from backend.app.models.company import Company
-            from sqlalchemy import select
-            company_result = await db.execute(
-                select(Company.name).where(Company.id == interview.company_id)
-            )
-            company_name = company_result.scalar_one_or_none()
-            if company_name:
-                user_config["target_company"] = company_name
-        except Exception:
-            pass
+        if "target_company" not in user_config:
+            try:
+                from backend.app.models.company import Company
+                from sqlalchemy import select
+                company_result = await db.execute(
+                    select(Company.name).where(Company.id == interview.company_id)
+                )
+                company_name = company_result.scalar_one_or_none()
+                if company_name:
+                    user_config["target_company"] = company_name
+            except Exception:
+                pass
 
     async def generate():
-        # 确保岗位信息已注入 Redis 会话上下文
+        # 确保岗位+公司信息已注入 Redis 会话上下文（每次都更新，避免公司串扰）
+        # Phase 14 修复：去掉 if not user_assets.get("target_position") 条件
+        # 原逻辑只在 target_position 为空时才注入，导致公司切换后旧公司信息残留
         session_ctx = await orchestrator._load_session(session_id) or {}
         user_assets = session_ctx.get("user_assets", {})
-        if not user_assets.get("target_position") and interview.position:
+        # 强制以 Interview 表数据为准（最新选择的公司）
+        if interview.position:
             user_assets["target_position"] = interview.position
-            if interview.company_id:
-                user_assets["target_company_id"] = str(interview.company_id)
-                if user_config.get("target_company"):
-                    user_assets["target_company"] = user_config["target_company"]
-            session_ctx["user_assets"] = user_assets
-            await orchestrator._save_session(session_id, session_ctx)
+        # 优先使用 target_company_name（用户在前端直接选择的字符串）
+        if interview.target_company_name:
+            user_assets["target_company"] = interview.target_company_name
+        if interview.company_id:
+            user_assets["target_company_id"] = str(interview.company_id)
+            if not user_assets.get("target_company") and user_config.get("target_company"):
+                user_assets["target_company"] = user_config["target_company"]
+        session_ctx["user_assets"] = user_assets
+        await orchestrator._save_session(session_id, session_ctx)
 
         full_question_parts = []
         # 通过 agent_service.stream_with_intent 统一管理 DB 持久化
@@ -315,19 +369,23 @@ async def interview_command(
     user_config = {
         "target_position": interview.position or "",
     }
+    # 优先使用 target_company_name（用户在前端直接选择的字符串）
+    if interview.target_company_name:
+        user_config["target_company"] = interview.target_company_name
     if interview.company_id:
         user_config["target_company_id"] = str(interview.company_id)
-        try:
-            from backend.app.models.company import Company
-            from sqlalchemy import select
-            company_result = await db.execute(
-                select(Company.name).where(Company.id == interview.company_id)
-            )
-            company_name = company_result.scalar_one_or_none()
-            if company_name:
-                user_config["target_company"] = company_name
-        except Exception:
-            pass
+        if "target_company" not in user_config:
+            try:
+                from backend.app.models.company import Company
+                from sqlalchemy import select
+                company_result = await db.execute(
+                    select(Company.name).where(Company.id == interview.company_id)
+                )
+                company_name = company_result.scalar_one_or_none()
+                if company_name:
+                    user_config["target_company"] = company_name
+            except Exception:
+                pass
 
     # 确定消息文本
     if data.command == "start":
@@ -347,12 +405,25 @@ async def interview_command(
             session_ctx = await orchestrator._load_session(session_id) or {}
             user_assets = session_ctx.get("user_assets", {})
             user_assets["target_position"] = interview.position or ""
+            # 优先使用 target_company_name（用户在前端直接选择的字符串）
+            if interview.target_company_name:
+                user_assets["target_company"] = interview.target_company_name
             if interview.company_id:
                 user_assets["target_company_id"] = str(interview.company_id)
-                if user_config.get("target_company"):
+                if not user_assets.get("target_company") and user_config.get("target_company"):
                     user_assets["target_company"] = user_config["target_company"]
             session_ctx["user_assets"] = user_assets
             await orchestrator._save_session(session_id, session_ctx)
+
+            # Phase 14 调试日志：记录 /command 接口写入 Redis 的数据
+            logger.info(
+                f"[ Phase14 调试 /command start ] interview_id={interview_id} | "
+                f"session_id={session_id} | "
+                f"interview.target_company_name={interview.target_company_name} | "
+                f"interview.company_id={interview.company_id} | "
+                f"interview.position={interview.position} | "
+                f"user_assets={json.dumps(user_assets, ensure_ascii=False)}"
+            )
 
         if data.command == "end":
             try:
