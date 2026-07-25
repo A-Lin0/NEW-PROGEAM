@@ -190,7 +190,8 @@ class AgentOrchestrator:
         try:
             plan = await self.planner.plan(user_message, context)
         except Exception as e:
-            yield {"type": "error", "message": f"规划失败: {e}"}
+            logging.getLogger(__name__).error("规划失败: %s", e, exc_info=True)
+            yield {"type": "error", "message": "服务暂时不可用，请稍后重试"}
             return
 
         yield {"type": "plan", "plan": plan, "session_id": session_id}
@@ -326,7 +327,8 @@ class AgentOrchestrator:
             try:
                 plan = await self.planner.plan(message, context)
             except Exception as e:
-                yield f"[错误] 规划失败: {e}"
+                logging.getLogger(__name__).error("规划失败: %s", e, exc_info=True)
+                yield "服务暂时不可用，请稍后重试"
                 await self._save_session(session_id, session_ctx)
                 return
             agent_key = plan.get("target_agent")
@@ -516,7 +518,11 @@ class AgentOrchestrator:
         except asyncio.TimeoutError:
             yield {"type": "error", "message": "任务执行超时，请稍后重试"}
         except Exception as e:
-            yield {"type": "error", "message": f"服务内部错误: {str(e)}"}
+            # 技术错误仅记录后端日志，前端展示友好提示，禁止透传原始异常/堆栈/错误码
+            logging.getLogger(__name__).error(
+                "Agent 执行失败 task=%s: %s", task_type, e, exc_info=True
+            )
+            yield {"type": "error", "message": "服务暂时不可用，请稍后重试"}
 
     async def _stream_with_timeout(
         self, agent, payload, timeout=60

@@ -85,7 +85,7 @@ async def agent_sync(
         )
     except Exception as e:
         logger.error(f"同步执行异常: {e}", exc_info=True)
-        return ApiResponse.error(code=500, message=f"服务异常: {e}")
+        return ApiResponse.error(code=500, message="服务暂时不可用，请稍后重试")
 
 
 # ==================== 2. SSE 流式执行 ====================
@@ -121,8 +121,9 @@ async def agent_stream(
                 else:
                     yield {"event": "message", "data": sse_str}
         except Exception as e:
+            logger.error(f"流式执行异常: {e}", exc_info=True)
             err = json.dumps(
-                {"type": "error", "message": f"流式执行异常: {e}"},
+                {"type": "error", "message": "服务暂时不可用，请稍后重试"},
                 ensure_ascii=False,
             )
             yield {"event": "error", "data": err}

@@ -306,7 +306,7 @@ class AgentService:
         except Exception as e:
             logger.error(f"sync_execute 失败 session={session_id}: {e}", exc_info=True)
             await self.update_session_status(session_id, "error")
-            raise RuntimeError(f"Agent 执行失败: {e}") from e
+            raise RuntimeError("服务暂时不可用，请稍后重试") from e
 
         # 4. 更新会话主表
         await self.update_session_status(
@@ -386,6 +386,11 @@ class AgentService:
                         meta = json.loads(chunk[len("\n\n__META__"):])
                         if meta.get("session_finished"):
                             final_status = "finished"
+                        # Phase 14：review_agent 状态机信号
+                        if meta.get("review_status") == "success":
+                            final_status = "finished"
+                        elif meta.get("review_status") == "fail":
+                            final_status = "finished"  # 失败也标记为 finished，避免永久 ongoing
                     except Exception:
                         meta = None
                     # 传解析后的 dict 给前端，前端可直接读取 meta.question_index 等
@@ -401,7 +406,7 @@ class AgentService:
 
         except Exception as e:
             logger.error(f"stream_with_intent 失败 session={session_id}: {e}", exc_info=True)
-            yield self._sse({"type": "error", "message": f"流式执行异常: {e}"})
+            yield self._sse({"type": "error", "message": "服务暂时不可用，请稍后重试"})
             final_status = "error"
         finally:
             # 4. 批量写入 assistant 对话记录（流结束后一次性持久化，不阻塞 SSE）
@@ -523,7 +528,7 @@ class AgentService:
                     yield self._sse(event)
         except Exception as e:
             logger.error(f"stream_execute 失败 session={session_id}: {e}", exc_info=True)
-            yield self._sse({"type": "error", "message": f"流式执行异常: {e}"})
+            yield self._sse({"type": "error", "message": "服务暂时不可用，请稍后重试"})
             final_status = "error"
         finally:
             # 4. 更新会话状态并提交

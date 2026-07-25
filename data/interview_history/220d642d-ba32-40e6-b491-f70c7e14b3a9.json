@@ -1,0 +1,324 @@
+{
+  "session_id": "220d642d-ba32-40e6-b491-f70c7e14b3a9",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "（面试官暂时不可用，请稍后重试）"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "请结合你的实际经验回答以下问题。\n\n请简单介绍一下你自己，重点说明你与产品经理岗位相关的经历和能力。"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "自我介绍环节到此结束，接下来我们进入专业技术环节。\n\n请详细说明你在产品经理岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "面试到这里就全部结束了，感谢你的分享，后续结果我们会在一周内通知你，祝你顺利。"
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0, \"section_scores\": {\"self_intro\": 0.0, \"tech_qa\": 0.0, \"star_qa\": 0, \"project_qa\": 0, \"reverse_qa\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0.0, \"question_count\": 1, \"comment\": \"自我介绍环节得分 0.0/100，共1题\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0.0, \"question_count\": 1, \"comment\": \"专业技术环节得分 0.0/100，共1题\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 0, \"comment\": \"行为面试环节未进行\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 0, \"comment\": \"项目案例环节未进行\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"index\": 1, \"stage\": \"self_intro\", \"question\": \"请简单介绍一下你自己，重点说明你与产品经理岗位相关的经历和能力。\", \"answer\": \"（已跳过）\", \"score\": 0, \"skipped\": true}, {\"index\": 2, \"stage\": \"tech_qa\", \"question\": \"请详细说明你在产品经理岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？\", \"answer\": \"\", \"score\": 0, \"skipped\": false}], \"overall_problems\": [\"当前复盘分析暂时不可用，可稍后点击「重新生成」重试\"], \"improvement_plan\": {\"short_term\": [], \"long_term\": [], \"practice_suggestions\": []}, \"overall_comment\": \"复盘报告生成中，请稍后重试。\", \"error\": true}"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "请简单介绍一下你自己，重点说明你与产品经理岗位相关的经历和能力。",
+      "answer": "",
+      "review": "已跳过",
+      "score": 0,
+      "skipped": true
+    },
+    {
+      "stage": "tech_qa",
+      "question": "请详细说明你在产品经理岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {
+    "self_intro": [
+      0
+    ]
+  },
+  "section_scores": {
+    "self_intro": 0.0,
+    "tech_qa": 0.0,
+    "star_qa": 0,
+    "project_qa": 0,
+    "reverse_qa": 0
+  },
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 0,
+  "session_status": "finished",
+  "completed_stages": [
+    "self_intro"
+  ],
+  "target_position": "产品经理",
+  "user_assets": {
+    "target_position": "产品经理",
+    "target_company": "腾讯"
+  },
+  "pending_stage_start": null,
+  "ended": true,
+  "company_ctx": {
+    "has_company": false,
+    "company_name": "腾讯",
+    "industry": "",
+    "business": "",
+    "culture": "",
+    "interview_style": "",
+    "benefits": "",
+    "interview_process": "",
+    "avg_difficulty": "",
+    "hiring_points": ""
+  },
+  "position_ctx": {
+    "category": "产品",
+    "focus_points": "需求分析、用户研究、数据分析、产品设计、项目管理、商业思维",
+    "dimensions": [
+      {
+        "dim": "需求分析",
+        "directions": "用户故事、需求优先级、需求评审、需求变更管理"
+      },
+      {
+        "dim": "产品设计",
+        "directions": "产品架构、流程设计、原型设计、交互逻辑、信息架构"
+      },
+      {
+        "dim": "数据分析",
+        "directions": "指标体系、AB测试、漏斗分析、用户分群、数据驱动决策"
+      },
+      {
+        "dim": "用户研究",
+        "directions": "用户画像、用户访谈、问卷调研、可用性测试、用户旅程"
+      },
+      {
+        "dim": "项目管理",
+        "directions": "项目立项、进度管控、风险应对、跨部门协作、敏捷迭代"
+      },
+      {
+        "dim": "商业思维",
+        "directions": "商业模式、盈利路径、竞品分析、市场洞察、ROI评估"
+      }
+    ]
+  },
+  "question_cache": {
+    "asked_questions": [
+      {
+        "question": "请简单介绍一下你自己，重点说明你与产品经理岗位相关的经历和能力。",
+        "keywords": [
+          "经历和能",
+          "品经",
+          "理岗",
+          "产品",
+          "品经理",
+          "经历和",
+          "经理岗",
+          "关的",
+          "单介绍",
+          "历和",
+          "的经",
+          "理岗位",
+          "与产",
+          "说明你与",
+          "经理",
+          "自己",
+          "介绍一下",
+          "你与",
+          "一下你",
+          "经理岗位",
+          "重点说",
+          "的经历和",
+          "和能力",
+          "理岗位相",
+          "和能",
+          "介绍",
+          "位相",
+          "产品经理",
+          "重点说明",
+          "一下你自",
+          "位相关",
+          "请简单介",
+          "与产品经",
+          "相关的",
+          "你与产",
+          "一下",
+          "的经历",
+          "岗位相关",
+          "简单介",
+          "你与产品",
+          "单介",
+          "产品经",
+          "请简单",
+          "你自己",
+          "明你",
+          "品经理岗",
+          "绍一下",
+          "下你自",
+          "经历",
+          "下你",
+          "历和能",
+          "能力",
+          "请简",
+          "关的经",
+          "下你自己",
+          "绍一",
+          "绍一下你",
+          "简单介绍",
+          "历和能力",
+          "说明你",
+          "关的经历",
+          "相关的经",
+          "岗位相",
+          "单介绍一",
+          "点说明你",
+          "与产品",
+          "简单",
+          "岗位",
+          "点说",
+          "位相关的",
+          "明你与",
+          "重点",
+          "点说明",
+          "相关",
+          "介绍一",
+          "你自",
+          "明你与产"
+        ],
+        "dimension": null,
+        "stage": "self_intro"
+      },
+      {
+        "question": "请详细说明你在产品经理岗位中最熟悉的一项核心技术/专业技能，并举例说明你是如何应用的？",
+        "keywords": [
+          "品经",
+          "项核心",
+          "理岗",
+          "产品",
+          "位中",
+          "位中最熟",
+          "详细说",
+          "的一",
+          "品经理",
+          "最熟悉的",
+          "经理岗",
+          "技术",
+          "用的",
+          "明你在",
+          "请详细说",
+          "如何应用",
+          "应用的",
+          "理岗位",
+          "心技术",
+          "经理",
+          "你在",
+          "你在产品",
+          "在产品",
+          "最熟悉",
+          "熟悉的",
+          "经理岗位",
+          "专业技能",
+          "岗位中最",
+          "一项核",
+          "例说",
+          "明你在产",
+          "悉的一",
+          "何应用",
+          "产品经理",
+          "说明你在",
+          "并举例",
+          "详细说明",
+          "在产",
+          "你是如",
+          "一项核心",
+          "的一项核",
+          "细说",
+          "你是如何",
+          "举例说",
+          "最熟",
+          "说明你是",
+          "位中最",
+          "何应",
+          "核心技",
+          "例说明",
+          "细说明",
+          "悉的一项",
+          "悉的",
+          "项核",
+          "核心技术",
+          "心技",
+          "举例说明",
+          "产品经",
+          "明你",
+          "品经理岗",
+          "技能",
+          "中最熟",
+          "并举",
+          "请详",
+          "你在产",
+          "中最熟悉",
+          "是如何应",
+          "详细",
+          "专业技",
+          "是如何",
+          "说明你",
+          "熟悉的一",
+          "业技",
+          "岗位中",
+          "举例",
+          "例说明你",
+          "业技能",
+          "理岗位中",
+          "的一项",
+          "熟悉",
+          "中最",
+          "岗位",
+          "在产品经",
+          "项核心技",
+          "一项",
+          "核心",
+          "明你是如",
+          "专业",
+          "请详细",
+          "细说明你",
+          "并举例说",
+          "如何应",
+          "何应用的",
+          "你是",
+          "是如",
+          "明你是"
+        ],
+        "dimension": null,
+        "stage": "tech_qa"
+      }
+    ],
+    "asked_dimensions": []
+  },
+  "updated_at": 1784995458
+}

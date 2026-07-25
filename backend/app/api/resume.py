@@ -154,34 +154,57 @@ async def optimize_resume(
         raise HTTPException(status_code=503, detail="简历优化服务未就绪，请稍后重试")
 
     jd_context = _build_jd_context(data)
-    content_with_jd = data.content
-    if jd_context:
-        content_with_jd = f"{data.content}\n\n--- 岗位上下文 ---\n{jd_context}"
+    # 原始简历内容与岗位上下文严格分离，禁止拼接，避免 LLM 混淆输入边界
+    original_content = data.content
 
     async def generate():
         try:
             # 1. 输出优化后的完整文本（调用 ResumeAgent.optimize_section）
+            # 原始简历作为 content，岗位上下文独立传入 job_context
+            optimized_parts: list[str] = []
             async for chunk in resume_agent.optimize_section(
-                content_with_jd, section_type=data.section_type
+                original_content, section_type=data.section_type,
+                job_context=jd_context,
             ):
                 if isinstance(chunk, str) and chunk.startswith("\n\n__META__"):
                     continue
+                optimized_parts.append(chunk if isinstance(chunk, str) else str(chunk))
                 yield _sse({"content": chunk})
+
+            optimized_text = "".join(optimized_parts).strip()
 
             # 2. 分隔符
             yield _sse({"content": "\n\n---\n"})
 
-            # 3. 输出优化说明（分点列表）
-            explain_prompt = (
-                "基于刚才的优化结果，请用分点列表说明核心修改点与优化理由（3-5 条），"
-                "格式：\n**优化说明**\n1. ...\n2. ..."
-            )
+            # 3. 输出核心修改说明（对比原文与优化结果，列出 3-5 条修改点）
+            # 关键修复：将原文与优化后文本同时传入 prompt，让 LLM 基于真实差异生成说明
+            # 杜绝"未提供优化结果文本"这类无状态导致的自相矛盾提示
+            explain_prompt = f"""你是资深 HR，请对比下方「原始段落」与「优化后段落」，列出本次优化的核心修改点（3-5 条）。
+
+要求：
+1. 每条修改点需说明：改了什么 + 为什么这样改 + 带来的优化价值
+2. 修改点必须基于两段文本的真实差异，禁止编造未发生的修改
+3. 严禁输出"未提供优化结果文本"类提示——两段文本均已提供
+4. 严格按以下格式输出：
+
+**核心修改说明**
+1. 【修改点】... 【原因】... 【价值】...
+2. 【修改点】... 【原因】... 【价值】...
+3. 【修改点】... 【原因】... 【价值】...
+"""
             if jd_context:
-                explain_prompt += f"\n\n岗位上下文：\n{jd_context}"
+                explain_prompt += f"\n目标岗位上下文：\n{jd_context}\n"
+            explain_prompt += f"""
+【原始段落】
+{original_content}
+
+【优化后段落】
+{optimized_text}
+"""
             try:
                 await resume_agent._ensure_client()
                 if resume_agent._client is None:
-                    yield _sse({"content": "（优化说明生成失败：LLM 未配置）"})
+                    yield _sse({"content": "**核心修改说明**\n（优化说明生成失败：LLM 未配置）"})
                 else:
                     stream = await resume_agent._client.chat.completions.create(
                         model=resume_agent.model,
@@ -196,7 +219,7 @@ async def optimize_resume(
                             yield _sse({"content": c})
             except Exception as e:
                 logger.warning(f"生成优化说明失败: {e}")
-                yield _sse({"content": f"（优化说明生成失败：{str(e)}）"})
+                yield _sse({"content": "**核心修改说明**\n（优化说明生成失败，请稍后重试）"})
 
             yield "data: [DONE]\n\n"
         except Exception as e:

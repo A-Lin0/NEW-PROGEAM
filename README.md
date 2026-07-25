@@ -263,7 +263,7 @@ npm run dev
 | REDIS_PASSWORD | （空） | （空） | Redis 密码 |
 | LLM_API_KEY | （留空走降级模式） | （填入你的 Key） | LLM API Key |
 | LLM_BASE_URL | https://api.openai.com/v1 | https://api.openai.com/v1 | LLM 接口地址（兼容 DeepSeek 等 OpenAI 协议服务） |
-| LLM_MODEL | gpt-4o | gpt-4o | 模型名称（如 deepseek-chat） |
+| LLM_MODEL | gpt-4o | gpt-4o | 模型名称（如 deepseek-v4-flash） |
 | LLM_EMBEDDING_MODEL | text-embedding-3-small | text-embedding-3-small | 嵌入模型 |
 | VECTOR_STORE_TYPE | chroma | chroma | 向量库类型 |
 | CHROMA_PERSIST_DIR | ./data/chroma_db | /data/chroma_db | 向量库持久化目录 |
@@ -388,7 +388,7 @@ docker compose up -d
 
 **原因**：`LLM_API_KEY` 未配置或填写无效。
 
-**解决**：在 `.env` 中填入有效的 API Key 后重启后端。降级模式下任务规划走规则路由，面试/简历优化返回占位提示。`LLM_BASE_URL` 兼容任何 OpenAI 协议服务（如 DeepSeek `https://api.deepseek.com/v1`，配合 `LLM_MODEL=deepseek-chat`）。
+**解决**：在 `.env` 中填入有效的 API Key 后重启后端。降级模式下任务规划走规则路由，面试/简历优化返回占位提示。`LLM_BASE_URL` 兼容任何 OpenAI 协议服务（如 DeepSeek `https://api.deepseek.com/v1`，配合 `LLM_MODEL=deepseek-v4-flash`）。
 
 ### 4. 端口被占用
 

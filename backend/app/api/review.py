@@ -304,8 +304,10 @@ async def generate_review(
                     elif etype == "error":
                         yield f"data: {json.dumps({'type': 'error', 'message': event.get('message', '')}, ensure_ascii=False)}\n\n"
                     elif etype == "meta":
-                        # 复盘通常不产生 META 信号，透传即可
-                        pass
+                        # Phase 14：透传 review_status META 信号给前端
+                        meta = event.get("meta")
+                        if isinstance(meta, dict):
+                            yield f"data: {json.dumps({'type': 'meta', 'meta': meta}, ensure_ascii=False)}\n\n"
                 except json.JSONDecodeError:
                     yield f"data: {payload}\n\n"
             else:

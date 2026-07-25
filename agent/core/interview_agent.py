@@ -973,11 +973,11 @@ class InterviewAgent:
             logging.getLogger(__name__).error(
                 "面试官生成失败: %s", e, exc_info=True
             )
-            # 输出可见错误文本（不被 orchestrator META 过滤）
-            yield f"（面试官暂时不可用，请重试：{e}）"
+            # 输出友好提示，技术错误仅记录后端日志，禁止透传原始异常/堆栈/错误码
+            yield "（面试官暂时不可用，请稍后重试）"
             yield self._meta_json(
                 session_stage, session_stage,
-                f"面试官生成失败: {str(e)}",
+                "面试官暂时不可用，请稍后重试",
                 session_finished=False, note="错误"
             )
 
@@ -2614,6 +2614,10 @@ class InterviewAgent:
 
         保留完整对话历史，确保面试官的提问在结束面试前始终维持在上下文中。
         10题面试共20条消息（10条user + 10条interviewer），DeepSeek 32K 上下文足够容纳。
+
+        异常处理：捕获 LLM 调用异常并记录后端日志，向上抛出标准化异常，
+        由调用方（_handle_chat 等）的外层 try/except 统一兜底为友好提示，
+        杜绝原始错误码/堆栈透传到前端对话区。
         """
         messages = [{"role": "system", "content": system_prompt}]
         # 移除 history[-10:] 限制，保留完整对话历史
@@ -2626,30 +2630,46 @@ class InterviewAgent:
         if not any(m["role"] == "user" for m in messages):
             messages.append({"role": "user", "content": "请开始"})
 
-        stream = await self._client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            stream=True,
-            temperature=0.7,
-        )
-        async for chunk in stream:
-            delta = chunk.choices[0].delta
-            content = delta.content if delta and delta.content else None
-            if content:
-                yield content
+        try:
+            stream = await self._client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                stream=True,
+                temperature=0.7,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta
+                content = delta.content if delta and delta.content else None
+                if content:
+                    yield content
+        except Exception as e:
+            logging.getLogger(__name__).error(
+                "LLM 流式调用失败 model=%s: %s", self.model, e, exc_info=True
+            )
+            raise RuntimeError("LLM 调用失败") from e
 
     async def _llm_complete(self, system_prompt: str, user_content: str) -> str:
-        """非流式调用 LLM，返回完整文本"""
+        """非流式调用 LLM，返回完整文本
+
+        异常处理：捕获 LLM 调用异常并记录后端日志，向上抛出标准化异常，
+        由调用方的外层 try/except 统一兜底为友好提示。
+        """
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ]
-        resp = await self._client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=0.3,
-        )
-        return resp.choices[0].message.content.strip()
+        try:
+            resp = await self._client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.3,
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as e:
+            logging.getLogger(__name__).error(
+                "LLM 非流式调用失败 model=%s: %s", self.model, e, exc_info=True
+            )
+            raise RuntimeError("LLM 调用失败") from e
 
     # ============================================================
     # Prompt 构造
@@ -3984,7 +4004,10 @@ JD摘要：{jd_summary[:300]}
         try:
             return await self._llm_complete(prompt, "请生成复盘报告")
         except Exception as e:
-            return f"复盘报告生成失败: {str(e)}"
+            logging.getLogger(__name__).error(
+                "复盘报告生成失败: %s", e, exc_info=True
+            )
+            return "复盘报告生成中，请稍后重试。"
 
     def _find_current_question(self, records: list, stage: str, q_index: int) -> str:
         """找到当前阶段当前序号的题目"""
@@ -4206,8 +4229,8 @@ JD摘要：{jd_summary[:300]}
                 "ended_cleared": True,
             }
         except Exception as e:
-            logging.getLogger(__name__).error(f"重置会话失败: {e}")
-            return {"success": False, "error": str(e)}
+            logging.getLogger(__name__).error(f"重置会话失败: {e}", exc_info=True)
+            return {"success": False, "error": "会话重置失败，请稍后重试"}
 
     def _meta_json(
         self, current_stage: str, next_stage: str, text: str,

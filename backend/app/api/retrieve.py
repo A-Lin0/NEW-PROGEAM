@@ -92,8 +92,8 @@ async def retrieve_info(
         )
         return result
     except Exception as e:
-        logger.error(f"检索失败: {e}")
-        raise HTTPException(status_code=500, detail=f"检索服务内部错误: {str(e)}")
+        logger.error(f"检索失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="检索服务暂时不可用，请稍后重试")
 
 
 @router.post("/qa", response_model=QAResponse)
@@ -158,10 +158,10 @@ async def intelligent_qa(
     try:
         retrieve_result = await retriever.retrieve(retrieve_payload)
     except Exception as e:
-        logger.error(f"QA 检索失败: {e}")
+        logger.error(f"QA 检索失败: {e}", exc_info=True)
         return QAResponse(
             code=500,
-            message=f"检索失败: {str(e)}",
+            message="检索服务暂时不可用，请稍后重试",
             data=QAData(answer="检索服务异常，请稍后重试", has_result=False),
         )
 

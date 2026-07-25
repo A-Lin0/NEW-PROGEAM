@@ -7,6 +7,7 @@
 """
 
 import json
+import logging
 import os
 from typing import Optional, Any
 
@@ -83,7 +84,8 @@ class ResumeAgent:
             score_res = await self._get_ats_score(raw_resume, job_desc)
             yield json.dumps(score_res, ensure_ascii=False)
         except Exception as e:
-            yield json.dumps({"error": f"ATS 评分失败: {str(e)}"}, ensure_ascii=False)
+            logging.getLogger(__name__).error("ATS 评分失败: %s", e, exc_info=True)
+            yield json.dumps({"error": "ATS 评分暂时不可用，请稍后重试"}, ensure_ascii=False)
 
         # 2. 流式输出优化后的简历
         optimize_prompt = f"""
@@ -106,16 +108,21 @@ class ResumeAgent:
                 if content:
                     yield content
         except Exception as e:
-            yield f"\n\n[优化失败: {str(e)}]"
+            logging.getLogger(__name__).error("简历优化失败: %s", e, exc_info=True)
+            yield "\n\n[简历优化暂时不可用，请稍后重试]"
 
         yield "[DONE]"
 
-    async def optimize_section(self, content: str, section_type: str = "general"):
+    async def optimize_section(
+        self, content: str, section_type: str = "general",
+        job_context: str = "",
+    ):
         """
         流式优化简历段落（供 resume API 直接调用）
 
-        :param content: 简历段落原文
+        :param content: 简历段落原文（用户真实输入，严禁与岗位上下文拼接）
         :param section_type: 段落类型（experience/project/skill/education/summary/general）
+        :param job_context: 目标岗位/JD 上下文（独立传入，用于优化方向对齐，不混入原文）
         """
         await self._ensure_client()
         if not self._client:
@@ -123,24 +130,44 @@ class ResumeAgent:
             return
 
         type_hint = {
-            "experience": "工作经历段落，使用 STAR 法则强化成果量化",
-            "project": "项目经历段落，突出技术栈、难点与可量化产出",
-            "skill": "技能段落，按主次分组并标注熟练度",
-            "education": "教育背景段落，可补充相关课程/奖项",
-            "summary": "个人简介段落，提炼核心亮点",
+            "experience": "工作经历段落",
+            "project": "项目经历段落",
+            "skill": "技能段落",
+            "education": "教育背景段落",
+            "summary": "个人简介段落",
             "general": "通用简历段落",
         }.get(section_type, "通用简历段落")
 
-        prompt = f"""你是资深HR，请优化以下简历段落。
-段落类型说明：{type_hint}
+        # 构建岗位对齐指令（仅在提供岗位上下文时生效）
+        job_alignment = ""
+        if job_context and job_context.strip():
+            job_alignment = f"""
+【目标岗位对齐】
+目标岗位/JD 上下文：
+{job_context}
 
-优化要求：
-1. 突出量化成果，使用 STAR 法则（情境-任务-行动-结果）
-2. 语言精炼有力，避免空洞描述
-3. 保持原意，不虚构内容
-4. 直接输出优化后的段落，不要解释
+优化时需向岗位要求对齐：
+- 优先突出与目标岗位匹配的能力与经历
+- 自然融入 JD 中的关键技能词（仅当原文确有相关经历时）
+- 弱化与岗位无关的内容，但不删除核心信息
+"""
 
-原始段落：
+        prompt = f"""你是资深 HR 与简历顾问，请对用户提交的「{type_hint}」进行定制化优化改写。
+
+【严格约束】
+1. 必须严格基于下方「原始段落」进行改写，保留用户真实的公司名、岗位、时间、核心事件与数据
+2. 严禁脱离用户原文生成通用模板示例，严禁编造未提及的经历
+3. 严禁照抄原文不做修改，必须进行实质性优化
+4. 直接输出优化后的完整段落，不要输出任何解释、前言、后记
+{job_alignment}
+【五维度优化标准】
+1. 口语化转专业表达：将口语化描述转为职场化、专业化的表述
+2. 补充量化成果：在原文基础上补充合理的量化指标（如提升比例、交付规模、响应时间等），但不得虚构具体数字
+3. 梳理 STAR 逻辑：按情境-任务-行动-结果结构组织内容，突出行动与成果
+4. 突出岗位匹配度：结合目标岗位（若有）突出匹配的能力与经历
+5. 删除冗余表述：精简空洞、重复、无信息量的描述
+
+【原始段落】
 {content}
 """
         try:
@@ -156,7 +183,8 @@ class ResumeAgent:
                 if content_delta:
                     yield content_delta
         except Exception as e:
-            yield f"\n[优化失败: {str(e)}]"
+            logging.getLogger(__name__).error("简历段落优化失败: %s", e, exc_info=True)
+            yield "\n[简历优化暂时不可用，请稍后重试]"
 
     async def analyze_resume(self, content: str, job_description: str = ""):
         """
@@ -179,7 +207,8 @@ class ResumeAgent:
             score = await self._get_ats_score(content, job_description)
             yield json.dumps(score, ensure_ascii=False) + "\n\n"
         except Exception as e:
-            yield f"[ATS 评分失败: {str(e)}]\n\n"
+            logging.getLogger(__name__).error("ATS 评分失败: %s", e, exc_info=True)
+            yield "[ATS 评分暂时不可用，请稍后重试]\n\n"
 
         # 2. 流式输出分析报告
         prompt = f"""你是资深HR和简历顾问，请对以下简历进行深度分析。
@@ -210,7 +239,8 @@ class ResumeAgent:
                 if content_delta:
                     yield content_delta
         except Exception as e:
-            yield f"\n[分析失败: {str(e)}]"
+            logging.getLogger(__name__).error("简历分析失败: %s", e, exc_info=True)
+            yield "\n[简历分析暂时不可用，请稍后重试]"
 
     async def _get_ats_score(self, resume: str, job_desc: str) -> dict:
         """调用 LLM 获取 ATS 评分"""

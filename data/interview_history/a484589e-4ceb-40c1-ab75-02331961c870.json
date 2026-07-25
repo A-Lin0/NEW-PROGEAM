@@ -1,0 +1,106 @@
+{
+  "session_id": "a484589e-4ceb-40c1-ab75-02331961c870",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "（面试官暂时不可用，请重试：Error code: 400 - {'error': {'message': 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}）"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "面试到这里就全部结束了，感谢你的分享，后续结果我们会在一周内通知你，祝你顺利。"
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0.0, \"section_scores\": {\"self_intro\": 0, \"tech_qa\": 0, \"star_qa\": 0, \"project_qa\": 0, \"reverse_qa\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0, \"question_count\": 0, \"comment\": \"自我介绍环节未进行\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0, \"question_count\": 0, \"comment\": \"专业技术环节未进行\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 0, \"comment\": \"行为面试环节未进行\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 0, \"comment\": \"项目案例环节未进行\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"index\": 1, \"stage\": \"\", \"question\": \"面试到这里就全部结束了，感谢你的分享，后续结果我们会在一周内通知你，祝你顺利。\", \"answer\": \"（面试结束）\", \"score\": null, \"skipped\": false}], \"overall_problems\": [\"复盘生成失败: Error code: 400 - {'error': {'message': 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}\"], \"improvement_plan\": {\"short_term\": [], \"long_term\": [], \"practice_suggestions\": []}, \"overall_comment\": \"复盘服务异常，请稍后重试。\", \"error\": true}"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "",
+      "question": "面试到这里就全部结束了，感谢你的分享，后续结果我们会在一周内通知你，祝你顺利。",
+      "answer": "（面试结束）",
+      "review": "",
+      "score": null,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {},
+  "section_scores": {
+    "self_intro": 0,
+    "tech_qa": 0,
+    "star_qa": 0,
+    "project_qa": 0,
+    "reverse_qa": 0
+  },
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 0,
+  "session_status": "finished",
+  "completed_stages": [],
+  "target_position": "UI设计师",
+  "user_assets": {
+    "target_position": "UI设计师",
+    "target_company": "阿里巴巴"
+  },
+  "pending_stage_start": null,
+  "ended": true,
+  "company_ctx": {
+    "has_company": false,
+    "company_name": "阿里巴巴",
+    "industry": "",
+    "business": "",
+    "culture": "",
+    "interview_style": "",
+    "benefits": "",
+    "interview_process": "",
+    "avg_difficulty": "",
+    "hiring_points": ""
+  },
+  "position_ctx": {
+    "category": "设计",
+    "focus_points": "视觉设计、交互设计、设计体系、用户研究、跨角色协作、项目落地",
+    "dimensions": [
+      {
+        "dim": "视觉设计能力",
+        "directions": "视觉风格定义、品牌视觉适配、色彩排版体系、视觉落地还原"
+      },
+      {
+        "dim": "交互体验设计",
+        "directions": "用户路径优化、易用性设计、B端复杂场景交互、防误操作设计"
+      },
+      {
+        "dim": "从0到1项目落地",
+        "directions": "产品立项到设计上线全流程、需求拆解、方案选型与迭代"
+      },
+      {
+        "dim": "设计体系建设",
+        "directions": "组件库搭建、设计规范制定、多端视觉与交互统一"
+      },
+      {
+        "dim": "用户研究与数据",
+        "directions": "用户调研方法、可用性测试、数据驱动设计优化"
+      },
+      {
+        "dim": "跨角色协作",
+        "directions": "与产品/开发对齐、设计走查、需求变更应对"
+      }
+    ]
+  },
+  "question_cache": {
+    "asked_questions": [],
+    "asked_dimensions": []
+  },
+  "updated_at": 1784993357
+}

@@ -360,57 +360,87 @@ class RetrieverAgent:
         db_info: Optional[dict],
         company_name: str,
     ) -> str:
-        """基于召回知识片段，调用 LLM 生成自然语言答案"""
+        """基于召回知识片段，调用 LLM 生成自然语言答案
+
+        Phase 14 重构：强制自然语言输出，禁止原始字段裸露，
+        按问题类型（闲聊/公司信息）分别处理，避免全量信息堆砌。
+        """
         await self._ensure_llm()
         if not self._llm_client:
             raise RuntimeError("LLM 不可用")
 
-        # 构建知识上下文
+        # ---- 判断问题类型 ----
+        is_greeting = self._is_greeting(query)
+        target = company_name or (db_info or {}).get("name", "") or "目标公司"
+
+        # ---- 构建知识上下文（使用自然语言描述，禁止字段名裸露）----
         context_parts = []
         if db_info:
-            db_summary_parts = [f"【{db_info.get('name') or company_name}】"]
+            db_summary_parts = [f"公司：{db_info.get('name') or company_name}"]
             if db_info.get("industry"):
-                db_summary_parts.append(f"行业：{db_info['industry']}")
+                db_summary_parts.append(f"所属行业：{db_info['industry']}")
+            if db_info.get("size"):
+                db_summary_parts.append(f"公司规模：{db_info['size']}")
+            if db_info.get("location"):
+                db_summary_parts.append(f"总部地点：{db_info['location']}")
             if db_info.get("description"):
-                db_summary_parts.append(f"业务：{db_info['description']}")
+                db_summary_parts.append(f"业务介绍：{db_info['description']}")
             if db_info.get("culture"):
-                db_summary_parts.append(f"文化：{db_info['culture']}")
+                db_summary_parts.append(f"企业文化：{db_info['culture']}")
             if db_info.get("benefits"):
-                db_summary_parts.append(f"福利：{db_info['benefits']}")
+                db_summary_parts.append(f"福利待遇：{db_info['benefits']}")
             if db_info.get("interview_process"):
                 db_summary_parts.append(f"面试流程：{db_info['interview_process']}")
-            if db_info.get("avg_salary"):
-                db_summary_parts.append(f"平均薪资：{db_info['avg_salary']}")
             if db_info.get("avg_difficulty"):
                 db_summary_parts.append(f"面试难度：{db_info['avg_difficulty']}")
-            if db_info.get("size"):
-                db_summary_parts.append(f"规模：{db_info['size']}")
-            if db_info.get("location"):
-                db_summary_parts.append(f"地点：{db_info['location']}")
+            if db_info.get("avg_salary"):
+                db_summary_parts.append(f"平均薪资：{db_info['avg_salary']}")
             context_parts.append("；".join(db_summary_parts))
 
         for i, doc in enumerate(vector_docs):
             content = doc.get("content", "").strip()
             if content:
-                context_parts.append(f"【参考片段{i+1}】{content}")
+                context_parts.append(f"参考信息{i+1}：{content}")
 
-        knowledge = "\n\n".join(context_parts) if context_parts else "暂无相关数据"
+        knowledge = "\n".join(context_parts) if context_parts else "暂无相关数据"
 
-        prompt = f"""你是一个求职辅助助手。请根据以下知识库信息，回答用户的问题。
+        # ---- 闲聊/问候类问题：友好回应 + 引导 ----
+        if is_greeting:
+            prompt = f"""你是一名求职辅助助手，正在为用户解答关于「{target}」的问题。
 
-用户问题：{query}
+用户输入：{query}
 
-知识库参考信息：
+背景信息（仅供你了解上下文，不必全部输出）：
 {knowledge}
 
 回答要求：
-1. 基于知识库信息回答，不要编造数据
-2. 如果知识库信息足以回答，请给出具体、详细的答案
-3. 如果知识库信息不足以回答，请诚实说"根据现有资料无法确定"
-4. 回答要通顺自然，控制在200字以内
-5. 不要使用"根据知识库"等内部术语
-6. 答案中不要提及"参考片段"等内部标识
-7. 如果问及公司相关信息，务必先核实知识库中是否有该公司数据再回答"""
+1. 用户输入是问候或闲聊，请用友好、自然的口语化中文回应
+2. 简短问候后，自然引导用户提问关于{target}的面试、岗位、文化、薪资等具体问题
+3. 严禁堆砌公司全量基础信息
+4. 回答控制在50字以内
+5. 输出纯自然语言，禁止任何字段名、键值对、JSON、列表标识"""
+        else:
+            # ---- 正常公司问答：针对性回答 ----
+            prompt = f"""你是一名求职辅助助手。请基于以下公司信息，针对用户问题给出自然通顺的回答。
+
+用户问题：{query}
+
+公司信息：
+{knowledge}
+
+回答要求（必须严格遵守）：
+1. 仅回答用户问题所问的内容，禁止堆砌无关信息
+2. 必须用通顺自然的中文回答，像正常对话一样，禁止出现字段名（如name/industry/description等）、键值对、JSON格式、列表化原始数据
+3. 只提取与用户问题直接相关的信息组织回答，无关内容不得输出
+4. 信息来源于知识库或公司基础信息表，请用自然语言组织，不要提及"参考信息""知识库"等内部标识
+5. 如果信息足以回答，给出具体、详细的答案；如果信息不足以回答用户问题，请诚实说明"根据现有资料无法确定"，不要编造
+6. 回答控制在200字以内
+7. 输出纯自然语言，符合正常对话表达，不得出现任何技术字段标识
+
+示例：
+- 问"字节跳动面试流程是怎样的" → 回答"字节跳动的面试一般包含..."（只讲面试流程，不堆砌其他信息）
+- 问"腾讯薪资怎么样" → 回答"腾讯的薪资水平..."（只讲薪资，不输出业务介绍）
+"""
 
         try:
             response = await self._llm_client.chat.completions.create(
@@ -419,9 +449,48 @@ class RetrieverAgent:
                 temperature=0.3,
                 max_tokens=500,
             )
-            return response.choices[0].message.content.strip()
+            answer = response.choices[0].message.content.strip()
+            # 二次清洗：移除可能残留的字段名格式
+            answer = self._clean_raw_fields(answer)
+            return answer
         except Exception:
             raise
+
+    @staticmethod
+    def _is_greeting(query: str) -> bool:
+        """判断是否为问候/闲聊类问题"""
+        if not query:
+            return False
+        msg = query.strip().lower()
+        # 纯问候类（无公司信息意图）
+        greeting_patterns = [
+            "你好", "您好", "hi", "hello", "哈喽", "嗨",
+            "在吗", "在不在", "有人吗", "谢谢", "感谢",
+            "好的", "ok", "嗯", "哦", "再见", "bye",
+        ]
+        # 完全匹配或短输入（≤6字）且包含问候词
+        if len(msg) <= 6 and any(p in msg for p in greeting_patterns):
+            return True
+        # 询问身份类（"你是谁""你能做什么"）
+        identity_patterns = ["你是谁", "你是干什么的", "你能做什么", "你会什么",
+                             "你能帮我", "你是什么", "可以帮我"]
+        if any(p in msg for p in identity_patterns):
+            return True
+        return False
+
+    @staticmethod
+    def _clean_raw_fields(text: str) -> str:
+        """二次清洗：移除残留的字段名/键值对格式"""
+        if not text:
+            return text
+        import re
+        # 移除形如 "name: xxx" "industry: xxx" 等英文字段名裸露
+        text = re.sub(r'\b(name|industry|description|culture|benefits|interview_process|size|location|avg_salary|avg_difficulty)\s*[:：]\s*', '', text, flags=re.IGNORECASE)
+        # 移除形如 【参考片段x】 【参考信息x】 的内部标识
+        text = re.sub(r'【参考[^】]*】', '', text)
+        # 移除裸露的 JSON 大括号
+        text = re.sub(r'[{}]', '', text)
+        return text.strip()
 
     def _generate_answer_fallback(
         self,
@@ -430,56 +499,65 @@ class RetrieverAgent:
         db_info: Optional[dict],
         company_name: str,
     ) -> str:
-        """降级模式：关键词匹配 + 模板化答案"""
-        target = company_name or "该公司"
+        """降级模式：关键词匹配 + 模板化答案（Phase 14：清洗字段名，自然语言输出）"""
+        target = company_name or (db_info or {}).get("name", "") or "该公司"
         msg = query.lower()
+
+        # 闲聊/问候类：友好回应，不堆砌公司信息
+        if self._is_greeting(query):
+            return f"你好！很高兴为你服务。你可以问我关于{target}的面试流程、薪资待遇、企业文化、业务方向等问题，我会尽力为你解答。"
 
         # 按关键词匹配生成模板化答案
         if any(k in msg for k in ["加班", "工作强度", "累", "995", "996"]):
             if db_info and db_info.get("culture"):
                 return f"根据现有信息，{target}的企业文化中提到：{db_info['culture']}。关于加班情况，建议结合具体部门和岗位进一步了解。"
             if vector_docs:
-                return f"根据知识库资料，{target}的加班情况：{vector_docs[0].get('content', '')[:200]}"
+                content = self._clean_raw_fields(vector_docs[0].get('content', '')[:200])
+                return f"根据资料，{target}的工作强度情况：{content}。建议结合具体岗位了解。"
             return f"关于{target}的加班情况，暂无详细资料，建议通过脉脉、知乎等社区了解真实员工反馈。"
 
         if any(k in msg for k in ["福利", "待遇", "薪资", "工资", "年薪"]):
             if db_info:
                 parts = []
                 if db_info.get("avg_salary"):
-                    parts.append(f"平均薪资：{db_info['avg_salary']}")
+                    parts.append(f"平均薪资水平约为{db_info['avg_salary']}")
                 if db_info.get("benefits"):
-                    parts.append(f"福利待遇：{db_info['benefits']}")
+                    parts.append(f"福利待遇包括{db_info['benefits']}")
                 if parts:
-                    return f"{target}的待遇信息：{'；'.join(parts)}"
+                    return f"{target}的待遇情况：{'；'.join(parts)}。"
             if vector_docs:
-                return f"关于{target}的薪资待遇：{vector_docs[0].get('content', '')[:200]}（信息来源于网络，仅供参考）"
+                content = self._clean_raw_fields(vector_docs[0].get('content', '')[:200])
+                return f"关于{target}的薪资待遇，根据资料显示：{content}（信息仅供参考）"
             return f"暂无{target}的薪资待遇详细数据，建议通过招聘网站或社区了解。"
 
         if any(k in msg for k in ["面试", "面经", "难度", "难不难"]):
             if db_info:
                 parts = []
                 if db_info.get("interview_process"):
-                    parts.append(f"面试流程：{db_info['interview_process']}")
+                    parts.append(f"面试流程为{db_info['interview_process']}")
                 if db_info.get("avg_difficulty"):
-                    parts.append(f"面试难度：{db_info['avg_difficulty']}")
+                    parts.append(f"面试难度{db_info['avg_difficulty']}")
                 if parts:
-                    return f"{target}的面试情况：{'；'.join(parts)}"
+                    return f"{target}的面试情况：{'；'.join(parts)}。"
             if vector_docs:
-                return f"关于{target}的面试经验：{vector_docs[0].get('content', '')[:200]}"
+                content = self._clean_raw_fields(vector_docs[0].get('content', '')[:200])
+                return f"关于{target}的面试经验：{content}"
             return f"暂无{target}的面试经验资料，建议通过牛客网、面经社区等平台搜索。"
 
         if any(k in msg for k in ["文化", "氛围", "环境"]):
             if db_info and db_info.get("culture"):
-                return f"{target}的企业文化：{db_info['culture']}"
+                return f"{target}的企业文化是：{db_info['culture']}"
             if vector_docs:
-                return f"关于{target}的公司氛围：{vector_docs[0].get('content', '')[:200]}"
+                content = self._clean_raw_fields(vector_docs[0].get('content', '')[:200])
+                return f"关于{target}的公司氛围：{content}"
             return f"暂无{target}的企业文化详细资料。"
 
-        # 通用降级：拼接知识片段
+        # 通用降级：自然语言组织，禁止直接透传原始内容
         if vector_docs:
-            return f"关于「{query}」，根据现有资料：{vector_docs[0].get('content', '')[:300]}"
+            content = self._clean_raw_fields(vector_docs[0].get('content', '')[:300])
+            return f"关于「{query}」，根据现有资料：{content}"
         if db_info and db_info.get("description"):
-            return f"{target}：{db_info['description']}"
+            return f"{target}主要从事{db_info['description']}"
         return f"关于「{query}」，暂无相关资料可以回答，建议尝试更具体的查询。"
 
     @staticmethod
@@ -574,23 +652,33 @@ class RetrieverAgent:
 
     @staticmethod
     def _build_detail_items(vector_docs: list, db_info: Optional[dict]) -> list:
-        """组装 detail_items（兼容原有字段）"""
+        """组装 detail_items（Phase 14：使用中文类别名，禁止字段名裸露）"""
         detail_items = []
         for doc in vector_docs:
             content = doc.get("content", "").strip()
             if content:
+                # 清洗 content 中的字段名前缀
+                cleaned = content
+                import re
+                cleaned = re.sub(
+                    r'^(name|industry|description|culture|benefits|interview_process|location|size)\s*[:：]\s*',
+                    '', cleaned, flags=re.IGNORECASE | re.MULTILINE
+                )
                 detail_items.append({
                     "category": "知识库参考",
-                    "content": content[:300],
+                    "content": cleaned[:300],
                     "source": "向量知识库",
                     "reliability": "中",
                 })
         if db_info:
+            # 使用中文类别名，禁止英文字段名
             for field, category in [
                 ("description", "业务介绍"),
                 ("culture", "企业文化"),
                 ("benefits", "福利待遇"),
                 ("interview_process", "面试流程"),
+                ("avg_salary", "薪资水平"),
+                ("avg_difficulty", "面试难度"),
             ]:
                 if db_info.get(field):
                     detail_items.append({
@@ -603,7 +691,7 @@ class RetrieverAgent:
 
     @staticmethod
     def _generate_db_fallback(query: str, db_info: dict, company_name: str) -> str:
-        """二级兜底：基于公司基础信息生成针对性回答"""
+        """二级兜底：基于公司基础信息生成针对性回答（Phase 14：仅输出相关内容，自然语言）"""
         name = db_info.get("name") or company_name or "该公司"
         industry = db_info.get("industry") or ""
         size = db_info.get("size") or ""
@@ -617,62 +705,57 @@ class RetrieverAgent:
 
         msg = query.lower()
 
-        # 按问题类型生成针对性回答
+        # 闲聊/问候类：友好回应
+        greeting_patterns = ["你好", "您好", "hi", "hello", "哈喽", "在吗", "谢谢"]
+        if len(msg) <= 6 and any(p in msg for p in greeting_patterns):
+            return f"你好！你可以问我关于{name}的面试流程、薪资待遇、企业文化等问题。"
+
+        # 按问题类型生成针对性回答（仅输出相关内容）
         if any(k in msg for k in ["面试", "面经", "难度", "流程", "难不难"]):
-            parts = [f"关于{name}的面试信息："]
+            parts = []
             if interview_process:
-                parts.append(f"面试流程：{interview_process}")
+                parts.append(f"面试流程为{interview_process}")
             if avg_difficulty:
-                parts.append(f"面试难度：{avg_difficulty}")
-            if industry:
-                parts.append(f"所属行业：{industry}，面试通常会考察行业相关知识。")
-            if not interview_process and not avg_difficulty:
-                parts.append(f"{name}是一家{industry}行业的公司，规模约{size}，位于{location}。建议通过牛客网、脉脉等平台了解更多面试经验。")
-            return "；".join(parts)
+                parts.append(f"面试难度{avg_difficulty}")
+            if not parts:
+                if industry:
+                    return f"{name}是一家{industry}行业的公司，建议通过牛客网、脉脉等平台了解更多面试经验。"
+                return f"关于{name}的面试信息暂无详细资料，建议通过牛客网、脉脉等平台了解。"
+            return f"关于{name}的面试：{'；'.join(parts)}。"
 
         if any(k in msg for k in ["薪资", "待遇", "福利", "工资", "年薪"]):
-            parts = [f"关于{name}的薪资待遇："]
+            parts = []
             if avg_salary:
-                parts.append(f"平均薪资：{avg_salary}")
+                parts.append(f"平均薪资水平约为{avg_salary}")
             if benefits:
-                parts.append(f"福利待遇：{benefits}")
-            if not avg_salary and not benefits:
-                parts.append(f"{name}是{industry}行业的公司，规模{size}。建议通过招聘网站查看具体岗位薪资范围。")
-            return "；".join(parts)
+                parts.append(f"福利待遇包括{benefits}")
+            if not parts:
+                return f"关于{name}的薪资待遇暂无详细数据，建议通过招聘网站查看具体岗位薪资范围。"
+            return f"关于{name}的待遇：{'；'.join(parts)}。"
 
-        if any(k in msg for k in ["文化", "氛围", "环境", "怎么样"]):
-            parts = [f"关于{name}："]
+        if any(k in msg for k in ["文化", "氛围", "环境"]):
             if culture:
-                parts.append(f"企业文化：{culture}")
-            if description:
-                parts.append(f"业务介绍：{description}")
-            if industry:
-                parts.append(f"所属行业：{industry}")
-            if size:
-                parts.append(f"公司规模：{size}")
-            if location:
-                parts.append(f"所在地：{location}")
-            return "；".join(parts)
+                return f"{name}的企业文化是：{culture}"
+            return f"关于{name}的企业文化暂无详细资料。"
 
-        # 通用回答：汇总公司基础信息
-        parts = [f"关于{name}："]
-        if industry:
-            parts.append(f"所属行业：{industry}")
-        if size:
-            parts.append(f"公司规模：{size}")
-        if location:
-            parts.append(f"所在地：{location}")
-        if description:
-            parts.append(f"业务介绍：{description}")
-        if culture:
-            parts.append(f"企业文化：{culture}")
-        if benefits:
-            parts.append(f"福利待遇：{benefits}")
-        if interview_process:
-            parts.append(f"面试流程：{interview_process}")
-        if not any([industry, size, location, description, culture, benefits, interview_process]):
-            parts.append(f"建议通过官方渠道或招聘平台了解{name}的更多信息。")
-        return "；".join(parts)
+        if any(k in msg for k in ["业务", "做什么", "干嘛", "介绍"]):
+            if description:
+                return f"{name}主要从事{description}"
+            if industry:
+                return f"{name}是一家{industry}行业的公司"
+            return f"关于{name}的业务介绍暂无详细资料。"
+
+        # 通用回答：仅输出基础信息，不堆砌全量
+        if industry or size or location:
+            info = []
+            if industry:
+                info.append(f"属于{industry}行业")
+            if size:
+                info.append(f"规模{size}")
+            if location:
+                info.append(f"位于{location}")
+            return f"{name}{'，'.join(info)}。你可以进一步询问面试流程、薪资待遇、企业文化等具体问题。"
+        return f"关于{name}，建议通过官方渠道或招聘平台了解更多信息。"
 
     @staticmethod
     def _generate_friendly_empty(query: str, company_name: str, related_companies: list) -> dict:
@@ -716,13 +799,24 @@ class RetrieverAgent:
                 company_id = str(company.get("company_id") or company.get("id", ""))
                 if not company_id:
                     continue
-                # 拼接公司文本用于向量化
+                # 拼接公司文本用于向量化（Phase 14：使用自然语言描述，禁止字段名裸露）
                 text_parts = []
-                for field in ["name", "industry", "description", "culture", "benefits",
-                               "interview_process", "location", "size"]:
-                    val = company.get(field, "")
-                    if val:
-                        text_parts.append(f"{field}: {val}")
+                if company.get("name"):
+                    text_parts.append(f"公司名称：{company['name']}")
+                if company.get("industry"):
+                    text_parts.append(f"所属行业：{company['industry']}")
+                if company.get("description"):
+                    text_parts.append(f"业务介绍：{company['description']}")
+                if company.get("culture"):
+                    text_parts.append(f"企业文化：{company['culture']}")
+                if company.get("benefits"):
+                    text_parts.append(f"福利待遇：{company['benefits']}")
+                if company.get("interview_process"):
+                    text_parts.append(f"面试流程：{company['interview_process']}")
+                if company.get("location"):
+                    text_parts.append(f"总部地点：{company['location']}")
+                if company.get("size"):
+                    text_parts.append(f"公司规模：{company['size']}")
                 content = "\n".join(text_parts)
                 if not content.strip():
                     continue

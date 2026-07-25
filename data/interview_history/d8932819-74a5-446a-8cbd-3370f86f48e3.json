@@ -1,0 +1,228 @@
+{
+  "session_id": "d8932819-74a5-446a-8cbd-3370f86f48e3",
+  "history": [
+    {
+      "role": "user",
+      "content": "开始面试"
+    },
+    {
+      "role": "user",
+      "content": "下一题"
+    },
+    {
+      "role": "interviewer",
+      "content": "请结合你的实际经验回答以下问题。\n\n先做个自我介绍吧，重点讲讲你的产品相关经历和做过的项目，以及你在其中的角色和贡献。"
+    },
+    {
+      "role": "user",
+      "content": "结束面试"
+    },
+    {
+      "role": "interviewer",
+      "content": "面试到这里就全部结束了，感谢你的分享，后续结果我们会在一周内通知你，祝你顺利。"
+    },
+    {
+      "role": "user",
+      "content": "请复盘"
+    },
+    {
+      "role": "interviewer",
+      "content": "{\"total_score\": 0.0, \"section_scores\": {\"self_intro\": 0.0, \"tech_qa\": 0, \"star_qa\": 0, \"project_qa\": 0, \"reverse_qa\": 0}, \"stage_analysis\": [{\"stage\": \"self_intro\", \"label\": \"自我介绍\", \"score\": 0.0, \"question_count\": 2, \"comment\": \"自我介绍环节得分 0.0/100，共2题\"}, {\"stage\": \"tech_qa\", \"label\": \"专业技术\", \"score\": 0, \"question_count\": 0, \"comment\": \"专业技术环节未进行\"}, {\"stage\": \"star_qa\", \"label\": \"行为面试\", \"score\": 0, \"question_count\": 0, \"comment\": \"行为面试环节未进行\"}, {\"stage\": \"project_qa\", \"label\": \"项目案例\", \"score\": 0, \"question_count\": 0, \"comment\": \"项目案例环节未进行\"}, {\"stage\": \"reverse_qa\", \"label\": \"反向提问\", \"score\": 0, \"question_count\": 0, \"comment\": \"反向提问环节未进行\"}], \"question_by_question\": [{\"stage\": \"self_intro\", \"question\": \"先做个自我介绍吧，重点讲讲你的产品相关经历和做过的项目，以及你在其中的角色和贡献。\", \"answer\": \"未作答，直接跳过\", \"score\": 0, \"advantages\": [], \"shortcomings\": [\"未进行任何回答\", \"完全未参与面试问答\"], \"optimization\": \"务必回答面试官问题，可从项目经历、角色、贡献展开，哪怕简要说明。\"}], \"overall_problems\": [\"候选人全程未回答任何问题，仅用指令词操作\", \"缺乏基本的面试参与意识和沟通意愿\"], \"improvement_plan\": {\"short_term\": [\"立即练习自我介绍，准备1-2个产品项目案例\", \"熟悉面试流程，确保能自然回答基础问题\"], \"long_term\": [\"积累产品方法论，提升项目复盘与表达能力\", \"模拟面试训练，克服紧张或回避心理\"], \"practice_suggestions\": [\"录制自我介绍并回听改进，要求2分钟内清晰展示角色、贡献\"]}, \"overall_comment\": \"该面试中候选人未进行任何实质性回答，全程仅使用指令词操作，导致所有问题得分为0。这反映出候选人对面试缺乏基本准备和沟通意愿，可能因紧张或不熟悉导致回避。核心建议：立即进行自我介绍与项目梳理的实操练习，纠正‘跳过问题’的倾向，并参与模拟面试以提升应对能力。\"}\n\n__META__{\"review_status\": \"success\"}"
+    }
+  ],
+  "question_records": [
+    {
+      "stage": "self_intro",
+      "question": "",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    },
+    {
+      "stage": "self_intro",
+      "question": "先做个自我介绍吧，重点讲讲你的产品相关经历和做过的项目，以及你在其中的角色和贡献。",
+      "answer": "",
+      "review": "",
+      "score": 0,
+      "skipped": false
+    }
+  ],
+  "stage_scores": {},
+  "section_scores": {
+    "self_intro": 0.0,
+    "tech_qa": 0,
+    "star_qa": 0,
+    "project_qa": 0,
+    "reverse_qa": 0
+  },
+  "total_score": 0.0,
+  "current_stage": "end",
+  "question_index": 0,
+  "session_status": "finished",
+  "completed_stages": [],
+  "target_position": "产品经理",
+  "user_assets": {
+    "target_position": "产品经理",
+    "target_company": "腾讯"
+  },
+  "pending_stage_start": null,
+  "ended": true,
+  "company_ctx": {
+    "has_company": false,
+    "company_name": "腾讯",
+    "industry": "",
+    "business": "",
+    "culture": "",
+    "interview_style": "",
+    "benefits": "",
+    "interview_process": "",
+    "avg_difficulty": "",
+    "hiring_points": ""
+  },
+  "position_ctx": {
+    "category": "产品",
+    "focus_points": "需求分析、用户研究、数据分析、产品设计、项目管理、商业思维",
+    "dimensions": [
+      {
+        "dim": "需求分析",
+        "directions": "用户故事、需求优先级、需求评审、需求变更管理"
+      },
+      {
+        "dim": "产品设计",
+        "directions": "产品架构、流程设计、原型设计、交互逻辑、信息架构"
+      },
+      {
+        "dim": "数据分析",
+        "directions": "指标体系、AB测试、漏斗分析、用户分群、数据驱动决策"
+      },
+      {
+        "dim": "用户研究",
+        "directions": "用户画像、用户访谈、问卷调研、可用性测试、用户旅程"
+      },
+      {
+        "dim": "项目管理",
+        "directions": "项目立项、进度管控、风险应对、跨部门协作、敏捷迭代"
+      },
+      {
+        "dim": "商业思维",
+        "directions": "商业模式、盈利路径、竞品分析、市场洞察、ROI评估"
+      }
+    ]
+  },
+  "question_cache": {
+    "asked_questions": [
+      {
+        "question": "",
+        "keywords": [],
+        "dimension": null,
+        "stage": "self_intro"
+      },
+      {
+        "question": "先做个自我介绍吧，重点讲讲你的产品相关经历和做过的项目，以及你在其中的角色和贡献。",
+        "keywords": [
+          "讲你",
+          "我介",
+          "你在其中",
+          "讲你的",
+          "以及你",
+          "自我",
+          "和贡献",
+          "及你",
+          "角色",
+          "过的项目",
+          "重点",
+          "你在",
+          "色和",
+          "的角色",
+          "讲讲你",
+          "介绍吧",
+          "中的角",
+          "点讲",
+          "的产品相",
+          "重点讲",
+          "产品",
+          "的项目",
+          "其中的角",
+          "先做个自",
+          "中的",
+          "相关经历",
+          "色和贡",
+          "讲你的产",
+          "以及你在",
+          "的角",
+          "历和",
+          "关经历和",
+          "品相关",
+          "做过的",
+          "我介绍吧",
+          "关经",
+          "你的产",
+          "和做过",
+          "自我介",
+          "经历",
+          "中的角色",
+          "经历和做",
+          "产品相关",
+          "在其",
+          "的项",
+          "介绍",
+          "及你在其",
+          "的产",
+          "和做过的",
+          "品相",
+          "相关",
+          "你在其",
+          "在其中",
+          "贡献",
+          "我介绍",
+          "经历和",
+          "做个",
+          "的产品",
+          "点讲讲",
+          "色和贡献",
+          "你的产品",
+          "点讲讲你",
+          "个自我",
+          "重点讲讲",
+          "个自我介",
+          "绍吧",
+          "及你在",
+          "个自",
+          "历和做",
+          "过的项",
+          "其中",
+          "其中的",
+          "做过",
+          "讲讲",
+          "产品相",
+          "历和做过",
+          "做个自",
+          "以及",
+          "先做",
+          "角色和",
+          "做过的项",
+          "相关经",
+          "过的",
+          "的角色和",
+          "和贡",
+          "在其中的",
+          "和做",
+          "角色和贡",
+          "做个自我",
+          "自我介绍",
+          "先做个",
+          "讲讲你的",
+          "关经历",
+          "品相关经"
+        ],
+        "dimension": "产品设计",
+        "stage": "self_intro"
+      }
+    ],
+    "asked_dimensions": [
+      "产品设计"
+    ]
+  },
+  "updated_at": 1784996715
+}

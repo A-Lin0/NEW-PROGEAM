@@ -9,12 +9,19 @@
 
 触发方式：API 显式调用（POST /api/review/{id}/generate）或 auto_route 自动联动
 
-Phase 14 修复：重新生成时执行评分全量重算
-- LLM 重新评估每道题的得分（question_by_question[].score）
-- 基于重评估的单题得分，重算各阶段得分（section_scores）和综合总分（total_score）
-- 全量覆盖原有评分数据，确保重新生成后评分与点评均发生更新
+Phase 14 修复：
+1. 重新生成时执行评分全量重算
+   - LLM 重新评估每道题的得分（question_by_question[].score）
+   - 基于重评估的单题得分，重算各阶段得分（section_scores）和综合总分（total_score）
+   - 全量覆盖原有评分数据，确保重新生成后评分与点评均发生更新
+2. 状态机管理：pending → success / fail，杜绝永久"生成中"
+3. 自动重试：LLM 调用失败自动重试1次
+4. 超时保护：LLM 调用超过60秒自动失败
+5. META 信号：生成完成后发送 META 信号通知前端
+6. 兜底机制：失败后基于已有数据生成基础报告，保证页面非全空
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -39,6 +46,11 @@ QUESTION_BANK_CONFIG = {
     "project_qa":  3,
     "reverse_qa":  1,
 }
+
+# LLM 调用超时时间（秒）
+LLM_TIMEOUT_SECONDS = 60
+# LLM 调用最大重试次数
+LLM_MAX_RETRIES = 2
 
 
 class ReviewAgent:
@@ -83,6 +95,11 @@ class ReviewAgent:
           "improvement_plan": {...},
           "overall_comment": "..."
         }
+
+        Phase 14 状态机：pending → success / fail
+        - 生成中：不发送 META
+        - 生成成功：发送 META {review_status: "success"}
+        - 生成失败：发送 META {review_status: "fail"}，并输出兜底报告
         """
         # ---- 数据提取 ----
         transcript = (
@@ -104,33 +121,26 @@ class ReviewAgent:
 
         await self._ensure_client()
 
-        # 无 LLM 降级：返回纯评分数据
+        # 无 LLM 降级：返回纯评分数据 + 兜底分析
         if not self._client:
-            yield json.dumps({
-                "total_score": total_score,
-                "section_scores": section_scores,
-                "stage_analysis": self._build_stage_analysis(section_scores, question_records),
-                "question_by_question": self._build_qa_summary(question_records),
-                "overall_problems": ["LLM 未配置，无法生成深度分析"],
-                "improvement_plan": {"short_term": [], "long_term": [], "practice_suggestions": []},
-                "overall_comment": "请在 .env 中配置 LLM_API_KEY 后重新生成复盘报告。",
-                "degraded": True,
-            }, ensure_ascii=False)
+            report = self._build_fallback_report(
+                question_records, section_scores, total_score,
+                "LLM 未配置，无法生成深度分析。请在 .env 中配置 LLM_API_KEY 后重新生成复盘报告。",
+            )
+            yield json.dumps(report, ensure_ascii=False)
+            # 发送 META 信号：通知前端生成完成（degraded 状态）
+            yield f"\n\n__META__{json.dumps({'review_status': 'success', 'degraded': True}, ensure_ascii=False)}"
             yield "[DONE]"
             return
 
         # 对话记录为空
         if not transcript:
-            yield json.dumps({
-                "total_score": total_score,
-                "section_scores": section_scores,
-                "stage_analysis": self._build_stage_analysis(section_scores, question_records),
-                "question_by_question": self._build_qa_summary(question_records),
-                "overall_problems": ["对话记录为空，无法评估"],
-                "improvement_plan": {"short_term": [], "long_term": [], "practice_suggestions": []},
-                "overall_comment": "未检测到面试对话内容。",
-                "empty": True,
-            }, ensure_ascii=False)
+            report = self._build_fallback_report(
+                question_records, section_scores, total_score,
+                "未检测到面试对话内容，无法生成深度分析。",
+            )
+            yield json.dumps(report, ensure_ascii=False)
+            yield f"\n\n__META__{json.dumps({'review_status': 'success', 'empty': True}, ensure_ascii=False)}"
             yield "[DONE]"
             return
 
@@ -141,28 +151,59 @@ class ReviewAgent:
             question_records
         )
 
-        try:
-            response = await self._client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-            )
-            content = response.choices[0].message.content.strip()
-            if content.startswith("```"):
-                content = content.split("\n", 1)[-1].rsplit("```", 1)[0]
+        # Phase 14：LLM 调用 + 自动重试 + 超时保护
+        llm_success = False
+        llm_result = None
+        last_error = None
 
+        for attempt in range(1, LLM_MAX_RETRIES + 1):
             try:
-                llm_result = json.loads(content)
-            except json.JSONDecodeError:
-                llm_result = {
-                    "question_by_question": [],
-                    "overall_problems": [],
-                    "improvement_plan": {"short_term": [], "long_term": [], "practice_suggestions": []},
-                    "overall_comment": content,
-                }
+                logging.getLogger(__name__).info(
+                    "复盘 LLM 调用 attempt=%d/%d model=%s",
+                    attempt, LLM_MAX_RETRIES, self.model
+                )
+                response = await asyncio.wait_for(
+                    self._client.chat.completions.create(
+                        model=self.model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.3,
+                    ),
+                    timeout=LLM_TIMEOUT_SECONDS,
+                )
+                content = response.choices[0].message.content.strip()
+                if content.startswith("```"):
+                    content = content.split("\n", 1)[-1].rsplit("```", 1)[0]
 
-            # Phase 14：评分全量重算
-            # 基于 LLM 重新评估的单题得分，更新 question_records 并重算 section_scores/total_score
+                try:
+                    llm_result = json.loads(content)
+                    llm_success = True
+                    break
+                except json.JSONDecodeError:
+                    # JSON 解析失败，构造部分结果
+                    llm_result = {
+                        "question_by_question": [],
+                        "overall_problems": [],
+                        "improvement_plan": {"short_term": [], "long_term": [], "practice_suggestions": []},
+                        "overall_comment": content,
+                    }
+                    llm_success = True
+                    logging.getLogger(__name__).warning(
+                        "复盘 LLM 返回非 JSON 格式，使用原始文本作为 overall_comment"
+                    )
+                    break
+            except asyncio.TimeoutError:
+                last_error = f"LLM 调用超时（{LLM_TIMEOUT_SECONDS}秒）"
+                logging.getLogger(__name__).warning(
+                    "复盘 LLM 调用超时 attempt=%d/%d", attempt, LLM_MAX_RETRIES
+                )
+            except Exception as e:
+                last_error = str(e)
+                logging.getLogger(__name__).warning(
+                    "复盘 LLM 调用失败 attempt=%d/%d: %s", attempt, LLM_MAX_RETRIES, e
+                )
+
+        if llm_success and llm_result:
+            # ---- 评分全量重算 ----
             llm_qa_list = llm_result.get("question_by_question", [])
             recalculated_records = self._merge_llm_scores_to_records(
                 question_records, llm_qa_list
@@ -190,27 +231,96 @@ class ReviewAgent:
                 "total_score": final_total_score,
                 "section_scores": final_section_scores,
                 "stage_analysis": self._build_stage_analysis(final_section_scores, recalculated_records),
-                "question_by_question": llm_qa_list,
-                "overall_problems": llm_result.get("overall_problems", []),
-                "improvement_plan": llm_result.get("improvement_plan", {
+                "question_by_question": llm_qa_list if llm_qa_list else self._build_qa_summary(recalculated_records),
+                "overall_problems": llm_result.get("overall_problems") or ["暂无整体问题分析"],
+                "improvement_plan": llm_result.get("improvement_plan") or {
                     "short_term": [], "long_term": [], "practice_suggestions": []
-                }),
-                "overall_comment": llm_result.get("overall_comment", ""),
+                },
+                "overall_comment": llm_result.get("overall_comment") or "",
             }
             yield json.dumps(report, ensure_ascii=False)
-        except Exception as e:
-            yield json.dumps({
-                "total_score": total_score,
-                "section_scores": section_scores,
-                "stage_analysis": self._build_stage_analysis(section_scores, question_records),
-                "question_by_question": self._build_qa_summary(question_records),
-                "overall_problems": [f"复盘生成失败: {str(e)}"],
-                "improvement_plan": {"short_term": [], "long_term": [], "practice_suggestions": []},
-                "overall_comment": "复盘服务异常，请稍后重试。",
-                "error": True,
-            }, ensure_ascii=False)
+            # 发送 META 信号：通知前端生成成功
+            yield f"\n\n__META__{json.dumps({'review_status': 'success'}, ensure_ascii=False)}"
+        else:
+            # ---- 兜底：LLM 全部失败，基于已有数据生成基础报告 ----
+            logging.getLogger(__name__).error(
+                "复盘报告生成失败（全部重试已耗尽）model=%s last_error=%s",
+                self.model, last_error
+            )
+            report = self._build_fallback_report(
+                question_records, section_scores, total_score,
+                "复盘报告生成失败，可稍后点击「重新生成」重试。",
+                error=True,
+            )
+            yield json.dumps(report, ensure_ascii=False)
+            # 发送 META 信号：通知前端生成失败（但仍有兜底数据）
+            yield f"\n\n__META__{json.dumps({'review_status': 'fail', 'error': True}, ensure_ascii=False)}"
 
         yield "[DONE]"
+
+    def _build_fallback_report(
+        self,
+        question_records: list,
+        section_scores: dict,
+        total_score: float,
+        comment: str,
+        error: bool = False,
+    ) -> dict:
+        """构建兜底报告：基于已有数据生成基础统计，保证页面非全空
+
+        Phase 14 新增：LLM 失败时的兜底机制
+        - 评分数据优先使用面试Agent已计算的数据
+        - 若面试Agent评分为0，基于 question_records 重算
+        - 逐题复盘使用 _build_qa_summary 生成基础摘要
+        - 整体问题、改进计划提供基础引导内容
+        """
+        # 评分兜底：优先复用面试Agent评分，为0则重算
+        if not total_score or total_score <= 0:
+            recalculated_section_scores, recalculated_total_score = (
+                self._recalculate_scores(question_records)
+            )
+            if recalculated_total_score > 0:
+                section_scores = recalculated_section_scores
+                total_score = recalculated_total_score
+        else:
+            recalculated_section_scores, recalculated_total_score = (
+                self._recalculate_scores(question_records)
+            )
+            if recalculated_total_score > 0:
+                section_scores = recalculated_section_scores
+                total_score = recalculated_total_score
+
+        # 基于问题记录统计跳过情况
+        total_q = len(question_records)
+        skipped_q = len([r for r in question_records if r.get("skipped")])
+        answered_q = total_q - skipped_q
+
+        # 基础整体问题
+        overall_problems = []
+        if skipped_q > 0:
+            overall_problems.append(f"本场面试共跳过 {skipped_q} 道题，建议充分准备后再战")
+        if answered_q == 0:
+            overall_problems.append("本场面试无有效作答记录，建议重新进行模拟面试")
+        if not overall_problems:
+            overall_problems.append("复盘分析暂时不可用，可稍后点击「重新生成」重试")
+
+        # 基础改进计划
+        improvement_plan = {
+            "short_term": ["针对薄弱环节进行专项练习"] if answered_q > 0 else [],
+            "long_term": ["系统化提升岗位核心能力"] if answered_q > 0 else [],
+            "practice_suggestions": ["建议多进行模拟面试练习"] if answered_q > 0 else [],
+        }
+
+        return {
+            "total_score": round(total_score, 1) if total_score else 0,
+            "section_scores": section_scores,
+            "stage_analysis": self._build_stage_analysis(section_scores, question_records),
+            "question_by_question": self._build_qa_summary(question_records),
+            "overall_problems": overall_problems,
+            "improvement_plan": improvement_plan,
+            "overall_comment": comment,
+            "error": error,
+        }
 
     # ============================================================
     # 辅助方法

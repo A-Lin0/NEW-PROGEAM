@@ -4,9 +4,18 @@
 从环境变量或 .env 文件加载配置
 """
 
+import logging
 import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
+
+
+# DeepSeek 已废弃模型名 → 推荐模型名映射（2026-07-24 官方下线 deepseek-chat / deepseek-reasoner）
+_DEPRECATED_LLM_MODELS = {
+    "deepseek-chat": "deepseek-v4-flash",
+    "deepseek-reasoner": "deepseek-v4-pro",
+}
 
 
 class Settings(BaseSettings):
@@ -54,6 +63,24 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = "https://api.openai.com/v1"
     LLM_MODEL: str = "gpt-4o"
     LLM_EMBEDDING_MODEL: str = "text-embedding-3-small"
+
+    @field_validator("LLM_MODEL")
+    @classmethod
+    def _validate_llm_model(cls, v: str) -> str:
+        """模型名校验：自动替换 DeepSeek 已废弃模型名，避免 400 参数错误。
+
+        2026-07-24 DeepSeek 官方下线 deepseek-chat / deepseek-reasoner，
+        若配置文件残留旧模型名，此处自动 fallback 到新模型并记录警告日志，
+        防止容器启动时注入旧环境变量导致全模块 LLM 调用失败。
+        """
+        if v in _DEPRECATED_LLM_MODELS:
+            new_model = _DEPRECATED_LLM_MODELS[v]
+            logging.getLogger(__name__).warning(
+                "LLM_MODEL='%s' 已被 DeepSeek 官方废弃，自动替换为 '%s'。"
+                "请尽快更新 .env 中的 LLM_MODEL 配置。", v, new_model,
+            )
+            return new_model
+        return v
 
     # ---- 向量数据库 ----
     VECTOR_STORE_TYPE: str = "chroma"
