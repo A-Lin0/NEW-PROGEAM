@@ -188,7 +188,7 @@ class RetrieverAgent:
         # ---- qa 模式：自然语言语义问答 ----
         if query_type == QUERY_TYPE_QA:
             return await self._handle_qa_mode(
-                query, company_name, company_id, top_k, db_session
+                query, company_name, company_id, target_position, top_k, db_session
             )
 
         # ---- keyword 模式：原有结构化查询（完全保留） ----
@@ -218,6 +218,7 @@ class RetrieverAgent:
         query: str,
         company_name: str,
         company_id: str,
+        target_position: str,
         top_k: int,
         db_session,
     ) -> dict:
@@ -268,7 +269,7 @@ class RetrieverAgent:
         # ---- 一级兜底：知识库命中 → LLM 生成精准回答 ----
         if vector_docs:
             try:
-                answer = await self._generate_answer_with_llm(query, vector_docs, db_info, company_name)
+                answer = await self._generate_answer_with_llm(query, vector_docs, db_info, company_name, target_position)
                 # 组装 detail_items
                 detail_items = self._build_detail_items(vector_docs, db_info)
                 return {
@@ -296,7 +297,7 @@ class RetrieverAgent:
         if db_info:
             # 优先用 LLM 基于公司基础信息生成通顺回答
             try:
-                answer = await self._generate_answer_with_llm(query, [], db_info, company_name)
+                answer = await self._generate_answer_with_llm(query, [], db_info, company_name, target_position)
                 return {
                     "retrieve_type": TYPE_COMPANY_QA,
                     "has_result": True,
@@ -359,11 +360,16 @@ class RetrieverAgent:
         vector_docs: list,
         db_info: Optional[dict],
         company_name: str,
+        target_position: str = "",
     ) -> str:
-        """基于召回知识片段，调用 LLM 生成自然语言答案
+        """基于召回知识片段，调用 LLM 生成专业面试顾问级答案
 
-        Phase 14 重构：强制自然语言输出，禁止原始字段裸露，
-        按问题类型（闲聊/公司信息）分别处理，避免全量信息堆砌。
+        升级要点：
+        - 强制结构化输出（总-分-总 + 分点编号）
+        - 岗位强相关：绑定 target_position 做差异化输出
+        - 信息三层加工：拆解 + 解读 + 建议
+        - 分场景范式：面试流程/岗位介绍/备考建议/闲聊
+        - 表达红线：禁止字段名、键值对、JSON 痕迹
         """
         await self._ensure_llm()
         if not self._llm_client:
@@ -372,6 +378,9 @@ class RetrieverAgent:
         # ---- 判断问题类型 ----
         is_greeting = self._is_greeting(query)
         target = company_name or (db_info or {}).get("name", "") or "目标公司"
+        position = target_position or "通用岗位"
+        # 问题场景分类
+        q_type = self._classify_question(query)
 
         # ---- 构建知识上下文（使用自然语言描述，禁止字段名裸露）----
         context_parts = []
@@ -392,7 +401,7 @@ class RetrieverAgent:
             if db_info.get("interview_process"):
                 db_summary_parts.append(f"面试流程：{db_info['interview_process']}")
             if db_info.get("avg_difficulty"):
-                db_summary_parts.append(f"面试难度：{db_info['avg_difficulty']}")
+                db_summary_parts.append(f"面试难度评分：{db_info['avg_difficulty']}")
             if db_info.get("avg_salary"):
                 db_summary_parts.append(f"平均薪资：{db_info['avg_salary']}")
             context_parts.append("；".join(db_summary_parts))
@@ -400,7 +409,7 @@ class RetrieverAgent:
         for i, doc in enumerate(vector_docs):
             content = doc.get("content", "").strip()
             if content:
-                context_parts.append(f"参考信息{i+1}：{content}")
+                context_parts.append(f"参考片段{i+1}：{content}")
 
         knowledge = "\n".join(context_parts) if context_parts else "暂无相关数据"
 
@@ -420,34 +429,49 @@ class RetrieverAgent:
 4. 回答控制在50字以内
 5. 输出纯自然语言，禁止任何字段名、键值对、JSON、列表标识"""
         else:
-            # ---- 正常公司问答：针对性回答 ----
-            prompt = f"""你是一名求职辅助助手。请基于以下公司信息，针对用户问题给出自然通顺的回答。
+            # ---- 专业问答：结构化 + 分点 + 岗位强相关 ----
+            # 按场景构造范式指令
+            scenario_rule = self._build_scenario_rule(q_type, target, position)
+
+            prompt = f"""你是一名资深互联网面试顾问，正在为求职者解答关于「{target}」{position}岗位的问题。
 
 用户问题：{query}
+目标公司：{target}
+目标岗位：{position}
 
-公司信息：
+可用信息（基于公司基础信息与知识库，仅供你参考组织答案，禁止直接复述字段）：
 {knowledge}
 
-回答要求（必须严格遵守）：
-1. 仅回答用户问题所问的内容，禁止堆砌无关信息
-2. 必须用通顺自然的中文回答，像正常对话一样，禁止出现字段名（如name/industry/description等）、键值对、JSON格式、列表化原始数据
-3. 只提取与用户问题直接相关的信息组织回答，无关内容不得输出
-4. 信息来源于知识库或公司基础信息表，请用自然语言组织，不要提及"参考信息""知识库"等内部标识
-5. 如果信息足以回答，给出具体、详细的答案；如果信息不足以回答用户问题，请诚实说明"根据现有资料无法确定"，不要编造
-6. 回答控制在200字以内
-7. 输出纯自然语言，符合正常对话表达，不得出现任何技术字段标识
+【回答强制规范】
+1. 结构必须遵循「总-分-总」：
+   - 开头总起：一句话回应核心问题，给出整体结论
+   - 中间分点：核心内容用「数字序号+主题」分点呈现（1. 2. 3.），每点包含「要点说明+行动建议」，重点内容可加粗
+   - 结尾总结：给出整体难度评估、核心建议或注意事项
+2. 必须结合「目标公司+目标岗位」双维度回答，岗位不同则侧重点不同：
+   - 技术岗（前端/后端/算法等）：聚焦技术栈、项目细节、系统设计、工程化能力
+   - 产品岗：聚焦需求分析、业务思考、数据指标、项目复盘
+   - 运营岗：聚焦运营方法论、数据驱动、活动策划、用户增长
+3. 信息处理三层加工：禁止直接复述原始信息，必须做「拆解+解读+建议」
+4. 岗位适配：回答内容必须贴合「{position}」岗位的考察重点，禁止输出与岗位无关的通用内容
+5. 信息不足时做合理行业通用补充，结合公司行业属性与岗位属性给出专业建议，禁止生硬说"无相关资料"
+{scenario_rule}
 
-示例：
-- 问"字节跳动面试流程是怎样的" → 回答"字节跳动的面试一般包含..."（只讲面试流程，不堆砌其他信息）
-- 问"腾讯薪资怎么样" → 回答"腾讯的薪资水平..."（只讲薪资，不输出业务介绍）
-"""
+【表达红线】
+- ✅ 全程使用自然通顺的专业中文，符合互联网行业通用表达
+- ✅ 专业术语准确，分点清晰，重点突出
+- ❌ 禁止出现任何字段名（如 name/industry/description 等）、键值对、JSON 格式
+- ❌ 禁止提及"参考片段""知识库"等内部标识
+- ❌ 禁止无结构大段文本堆砌
+- ❌ 禁止答非所问、无关信息堆砌
+
+请直接输出专业回答："""
 
         try:
             response = await self._llm_client.chat.completions.create(
                 model=self.llm_model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=500,
+                temperature=0.4,
+                max_tokens=1200,
             )
             answer = response.choices[0].message.content.strip()
             # 二次清洗：移除可能残留的字段名格式
@@ -455,6 +479,49 @@ class RetrieverAgent:
             return answer
         except Exception:
             raise
+
+    @staticmethod
+    def _classify_question(query: str) -> str:
+        """分类问题场景：interview_process / position_intro / preparation / greeting / other"""
+        if not query:
+            return "other"
+        msg = query.lower()
+        # 面试流程类
+        if any(k in msg for k in ["面试流程", "怎么面试", "面试几轮", "面试过程", "面试环节",
+                                    "面试步骤", "几面", "几轮面试", "面试安排"]):
+            return "interview_process"
+        # 岗位介绍类
+        if any(k in msg for k in ["岗位是干什么", "岗位介绍", "岗位职责", "做什么的", "做什么工作",
+                                    "岗位内容", "工作内容", "负责什么", "岗位是啥", "什么岗位"]):
+            return "position_intro"
+        # 备考建议类
+        if any(k in msg for k in ["怎么准备", "如何准备", "备考", "准备什么", "怎么复习",
+                                    "如何备考", "准备方向", "复习方向", "面试准备"]):
+            return "preparation"
+        return "other"
+
+    @staticmethod
+    def _build_scenario_rule(q_type: str, company: str, position: str) -> str:
+        """按场景构造回答范式指令"""
+        if q_type == "interview_process":
+            return f"""
+【本次回答场景：面试流程】
+- 按轮次拆分（如：简历筛选/笔试/技术一面/技术二面/HR面），每轮说明：考察重点、常见方向、准备建议
+- 结合「{position}」岗位属性调整各轮考察内容
+- 结尾给出整体难度评估与备考优先级"""
+        if q_type == "position_intro":
+            return f"""
+【本次回答场景：岗位介绍】
+- 说明：核心职责、核心能力要求、薪资范围、所属业务方向
+- 补充：岗位发展方向、对应面试考察重点
+- 结合「{company}」业务场景做延伸，不局限于基础信息"""
+        if q_type == "preparation":
+            return f"""
+【本次回答场景：备考建议】
+- 分维度给出可执行的准备方向：知识储备、项目梳理、刷题练习、业务了解
+- 结合「{position}」岗位与「{company}」特点给出针对性建议，拒绝通用模板
+- 分优先级标注，明确核心准备重点"""
+        return ""
 
     @staticmethod
     def _is_greeting(query: str) -> bool:

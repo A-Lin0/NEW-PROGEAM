@@ -27,6 +27,7 @@ class QARequest(BaseModel):
     """智能问答请求"""
     query: str = Field(..., min_length=1, description="用户自然语言问题")
     company_id: Optional[str] = Field(None, description="限定公司上下文（可选）")
+    target_position: Optional[str] = Field(None, description="目标岗位（可选，用于岗位差异化回答）")
 
 
 class RelatedCompany(BaseModel):
@@ -152,6 +153,7 @@ async def intelligent_qa(
         "retrieve_type": "company_qa",
         "company_name": company_name,
         "company_id": company_id,
+        "target_position": data.target_position or "",  # 岗位差异化回答
         "top_k": 5,
         "db_session": db,
     }
