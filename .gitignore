@@ -1,0 +1,33 @@
+# ========== 敏感文件（绝不推送）==========
+.env
+.env.*
+!.env.example
+
+# ========== 数据库文件 ==========
+*.db
+*.sqlite3
+backend/data/app.db
+data/app.db
+
+# ========== 向量库 ==========
+backend/data/chroma_db/
+data/chroma_db/
+
+# ========== Python ==========
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ========== Node ==========
+node_modules/
+dist/
+
+# ========== 调试日志 ==========
+.dbg/
+*.log
+
+# ========== 系统文件 ==========
+.DS_Store
+Thumbs.db
